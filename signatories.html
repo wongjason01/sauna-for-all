@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signatories — Sauna For All</title>
+<meta name="description" content="Sign the Public Sauna-Bathing Charter, see who has already signed, and find out how to contribute to the movement.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="">
+<header class="site-header">
+  <div class="nav">
+    <a href="index.html" class="nav-logo" aria-label="Sauna For All — home"><svg viewBox="0 0 300 78" xmlns="http://www.w3.org/2000/svg" style="height:34px">
+  <defs><path id="logoarc" d="M6,62 Q150,4 294,62" /></defs>
+  <text font-family="Inter, sans-serif" font-weight="800" font-size="34" fill="#df804f" letter-spacing="1">
+    <textPath href="#logoarc" startOffset="50%" text-anchor="middle">SAUNA FOR ALL</textPath>
+  </text>
+</svg></a>
+    <nav class="nav-links" id="navLinks">
+      <a href="about.html">About</a>
+<a href="overview.html">Overview</a>
+<a href="signatories.html" class="active">Signatories</a>
+<a href="news.html">News</a>
+<a href="faqs.html">FAQs</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="signatories.html#sign" class="btn btn-primary">Sign the Charter</a>
+    </div>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </div>
+</header>
+<main>
+<section class="section bg-cream" style="padding-bottom:0;">
+  <div class="container two-col">
+    <div>
+      <span class="eyebrow" style="color:var(--gold);">Signatories</span>
+      <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Sign the Charter, and meet those who already have</h1>
+      <p class="lede muted">Sauna for All is built by the people and organizations shaping public sauna today &mdash; operators, governments, designers, researchers, industry partners, and bathers. Sign the Charter to add your name, or explore who has already committed.</p>
+    </div>
+    <div class="placeholder-img" style="aspect-ratio:4/3;"><span>Image: sauna bucket / detail photography</span></div>
+  </div>
+</section><section class="section bg-white" id="sign">
+  <div class="container">
+    <div class="badge-note">Signing is an application process &mdash; it asks for real commitments and takes about 30 minutes.</div>
+    <div class="two-col">
+      <div>
+        <h2 style="font-size:clamp(1.7rem,3.4vw,2.2rem); margin-bottom:18px;">Sign the Charter</h2>
+        <p class="lede muted">By signing, you commit to the Charter&rsquo;s principles and to demonstrating how they are reflected in your decisions, operations, and stewardship.</p>
+
+        <ul class="checklist">
+          <li><span class="box"></span><p><strong>Part A &mdash; Commitment:</strong> who you are, why you&rsquo;re signing, your principles and commitments.</p></li>
+          <li><span class="box"></span><p><strong>Part B &mdash; Contribution:</strong> stewardship, the sector, research, looking forward.</p></li>
+          <li><span class="box"></span><p><strong>Part C &mdash; Consent and affirmation.</strong></p></li>
+          <li><span class="box"></span><p>About 25&ndash;30 minutes.</p></li>
+          <li><span class="box"></span><p>Responses go to the founding stewards for review.</p></li>
+        </ul>
+
+        <a href="#" class="btn btn-solid-orange">Open the Questionnaire</a>
+        <p class="small muted" style="margin-top:12px;">Opens in Google Forms.</p>
+      </div>
+
+      <div class="stack-20">
+        <div class="info-card">
+          <h3>What happens next</h3>
+          <p>Review by the stewards &rarr; confirmation &rarr; listed among signatories &rarr; welcomed to network channels.</p>
+        </div>
+        <div class="callout">The questionnaire is hosted on Google Forms. This page sets expectations before you begin.</div>
+        <div class="info-card">
+          <h3>Who can sign</h3>
+          <p class="small">Operators, hosts &amp; stewards &middot; Governments &amp; municipalities &middot; Designers, builders &amp; developers &middot; Researchers &amp; knowledge holders &middot; Industry partners &middot; Bathers &amp; community members.</p>
+          <a href="overview.html" style="display:inline-block; margin-top:10px; font-weight:700; text-decoration:underline; font-size:0.9rem;">Read who can sign in full &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section><section class="section bg-cream">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Signatories</span>
+      <h2>Who has signed the Charter</h2>
+      <p class="lede muted">Category, logo, country, and commitment are pulled live from the signatory database once connected &mdash; shown here as placeholder fields. Category is multi-select in the backend &mdash; filter by one or more below, or search by name or country.</p>
+    </div>
+    <div class="badge-note">This is a placeholder list &mdash; connect a live data source (spreadsheet or CMS) so it updates automatically as applications are approved.</div>
+    <div class="filter-bar">
+      <div class="filter-chips" id="signatoryFilters">
+        <button type="button" class="filter-chip active" data-category="">All</button>
+        <button type="button" class="filter-chip" data-category="Founding Stewards">Founding Stewards</button><button type="button" class="filter-chip" data-category="Advisors and Stewards">Advisors and Stewards</button><button type="button" class="filter-chip" data-category="Operators">Operators</button><button type="button" class="filter-chip" data-category="Governments and Public Bodies">Governments and Public Bodies</button><button type="button" class="filter-chip" data-category="Designers, Builders and Developers">Designers, Builders and Developers</button><button type="button" class="filter-chip" data-category="Industry Partners">Industry Partners</button><button type="button" class="filter-chip" data-category="Bathers and Community Members">Bathers and Community Members</button>
+      </div>
+      <input type="search" id="signatorySearch" class="filter-search" placeholder="Search by name or country&hellip;" aria-label="Search signatories">
+    </div>
+    <div class="signatories-grid" id="signatoriesGrid"><div class="signatory-card" data-categories="Operators" data-name="Name TBD" data-country="City, Canada">
+      <div class="signatory-card-top">
+        <div class="logo-tile" style="width:64px; height:64px; font-size:0.6rem;">Logo</div>
+        <div class="category-pills"><span class="category-pill">Operators</span></div>
+      </div>
+      <a href="#" class="signatory-name-link" target="_blank" rel="noopener">Name TBD</a>
+      <div class="signatory-country">City, Canada</div>
+      <p class="signatory-commitment">&ldquo;Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice.&rdquo;</p>
+    </div><div class="signatory-card" data-categories="Advisors and Stewards|Bathers and Community Members" data-name="Name TBD" data-country="City, Finland">
+      <div class="signatory-card-top">
+        <div class="logo-tile" style="width:64px; height:64px; font-size:0.6rem;">Logo</div>
+        <div class="category-pills"><span class="category-pill">Advisors and Stewards</span><span class="category-pill">Bathers and Community Members</span></div>
+      </div>
+      <a href="#" class="signatory-name-link" target="_blank" rel="noopener">Name TBD</a>
+      <div class="signatory-country">City, Finland</div>
+      <p class="signatory-commitment">&ldquo;Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice.&rdquo;</p>
+    </div><div class="signatory-card" data-categories="Operators" data-name="Name TBD" data-country="City, Ireland">
+      <div class="signatory-card-top">
+        <div class="logo-tile" style="width:64px; height:64px; font-size:0.6rem;">Logo</div>
+        <div class="category-pills"><span class="category-pill">Operators</span></div>
+      </div>
+      <a href="#" class="signatory-name-link" target="_blank" rel="noopener">Name TBD</a>
+      <div class="signatory-country">City, Ireland</div>
+      <p class="signatory-commitment">&ldquo;Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice.&rdquo;</p>
+    </div><div class="signatory-card" data-categories="Governments and Public Bodies" data-name="Name TBD" data-country="City, England">
+      <div class="signatory-card-top">
+        <div class="logo-tile" style="width:64px; height:64px; font-size:0.6rem;">Logo</div>
+        <div class="category-pills"><span class="category-pill">Governments and Public Bodies</span></div>
+      </div>
+      <a href="#" class="signatory-name-link" target="_blank" rel="noopener">Name TBD</a>
+      <div class="signatory-country">City, England</div>
+      <p class="signatory-commitment">&ldquo;Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice.&rdquo;</p>
+    </div><div class="signatory-card" data-categories="Designers, Builders and Developers" data-name="Name TBD" data-country="City, Canada">
+      <div class="signatory-card-top">
+        <div class="logo-tile" style="width:64px; height:64px; font-size:0.6rem;">Logo</div>
+        <div class="category-pills"><span class="category-pill">Designers, Builders and Developers</span></div>
+      </div>
+      <a href="#" class="signatory-name-link" target="_blank" rel="noopener">Name TBD</a>
+      <div class="signatory-country">City, Canada</div>
+      <p class="signatory-commitment">&ldquo;Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice.&rdquo;</p>
+    </div><div class="signatory-card" data-categories="Industry Partners" data-name="Name TBD" data-country="City, Finland">
+      <div class="signatory-card-top">
+        <div class="logo-tile" style="width:64px; height:64px; font-size:0.6rem;">Logo</div>
+        <div class="category-pills"><span class="category-pill">Industry Partners</span></div>
+      </div>
+      <a href="#" class="signatory-name-link" target="_blank" rel="noopener">Name TBD</a>
+      <div class="signatory-country">City, Finland</div>
+      <p class="signatory-commitment">&ldquo;Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice.&rdquo;</p>
+    </div></div>
+    <p class="filter-empty" id="signatoryEmpty">No signatories match your filters yet.</p>
+  </div>
+</section><section class="section bg-white">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Commitments</span>
+      <h2>In their own words</h2>
+    </div>
+    <div class="commitments-grid"><div class="quote-card">
+      <blockquote>&ldquo;Placeholder quote about why this signatory signed and what the Charter means for their work.&rdquo;</blockquote>
+      <div class="quote-attribution">Name TBD</div>
+      <div class="small muted">Canada</div>
+    </div><div class="quote-card">
+      <blockquote>&ldquo;Placeholder quote about why this signatory signed and what the Charter means for their work.&rdquo;</blockquote>
+      <div class="quote-attribution">Name TBD</div>
+      <div class="small muted">Finland</div>
+    </div><div class="quote-card">
+      <blockquote>&ldquo;Placeholder quote about why this signatory signed and what the Charter means for their work.&rdquo;</blockquote>
+      <div class="quote-attribution">Name TBD</div>
+      <div class="small muted">Ireland</div>
+    </div></div>
+  </div>
+</section><section class="section bg-green" id="commit">
+  <div class="container">
+    <div class="two-col">
+      <div>
+        <span class="eyebrow">Contribute</span>
+        <h2 style="margin:14px 0 18px; color:var(--white);">Commit to the movement</h2>
+        <p class="lede" style="opacity:0.9;">Sauna for All is entirely volunteer-led. This work &mdash; drafting the Charter, building the network, hosting workshops, and keeping this site running &mdash; cannot happen without support like yours and our partners&rsquo;. If you can contribute time, funding, expertise, or space, we want to hear from you.</p>
+      </div>
+      <div class="stack-20">
+        <div class="info-card on-green">
+          <h3 style="color:var(--white);">Ways to support</h3>
+          <p style="color:var(--cream); opacity:0.85;">In-kind space &amp; hosting &middot; funding &amp; grants &middot; research &amp; evaluation &middot; design &amp; build expertise &middot; translation &amp; local coordination.</p>
+        </div>
+        <a href="mailto:pelkoreb@uef.fi" class="btn btn-primary">Get in touch to contribute</a>
+      </div>
+    </div>
+  </div>
+</section><section class="section bg-cream">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Regional partners</span>
+      <h2>Independent partners coordinating locally</h2>
+      <p class="lede muted">Like Swimmable Cities, independent contacts for certain regions &mdash; for example, the Community Sauna Network. Logos and links to come.</p>
+    </div>
+    <div class="logo-row">
+      <div class="logo-tile">Community Sauna Network</div>
+      <div class="logo-tile">Regional partner</div>
+    </div>
+  </div>
+</section><section class="section bg-white">
+  <div class="container">
+    <div class="closing-grid">
+      <div class="closing-card tan">
+        <h3>Sauna is a common good.<br><em>We intend to keep it that way, together.</em></h3>
+        <a href="signatories.html#sign" class="btn btn-outline-dark" style="align-self:flex-start;">Sign the Charter</a>
+      </div>
+      <div class="closing-card cream">
+        <h3 style="font-size:1.15rem;">Stay close to the movement.</h3>
+        <form class="field-row" onsubmit="return false;">
+          <input type="email" placeholder="email address" required>
+          <button class="btn btn-solid-orange" type="submit">Sign up</button>
+        </form>
+        <p class="small muted">Occasional updates on the Charter, signatories, and events. No spam.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col" style="max-width:340px;">
+        <a href="index.html" aria-label="Sauna For All — home"><svg viewBox="0 0 300 78" xmlns="http://www.w3.org/2000/svg" style="height:36px">
+  <defs><path id="logoarc" d="M6,62 Q150,4 294,62" /></defs>
+  <text font-family="Inter, sans-serif" font-weight="800" font-size="34" fill="#e7c196" letter-spacing="1">
+    <textPath href="#logoarc" startOffset="50%" text-anchor="middle">SAUNA FOR ALL</textPath>
+  </text>
+</svg></a>
+        <p class="small" style="margin-top:16px; opacity:0.75;">A grassroots global movement guiding public sauna-bathing as common good.</p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Movement</h4>
+          <a href="overview.html">Overview &amp; Charter</a>
+          <a href="signatories.html">Signatories</a>
+          <a href="faqs.html">FAQs</a>
+        </div>
+        <div class="footer-col">
+          <h4>About</h4>
+          <a href="about.html">About &amp; Founding Stewards</a>
+          <a href="news.html">News</a>
+        </div>
+        <div class="footer-col">
+          <h4>Connect</h4>
+          <a href="signatories.html#commit">Contribute</a>
+          <a href="mailto:pelkoreb@uef.fi">pelkoreb@uef.fi</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 Sauna For All. Public Sauna. Common Good.</span>
+      <span>Site draft — v0.1</span>
+    </div>
+  </div>
+</footer>
+<script src="js/main.js"></script>
+</body>
+</html>
