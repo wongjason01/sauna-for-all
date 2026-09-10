@@ -119,6 +119,17 @@ def _normalize_url(url):
     return url if re.match(r"^https?://", url, re.I) else f"https://{url}"
 
 
+def _domain_of(url):
+    """Bare domain (no scheme/www/path) for a signatory's website, used to
+    pull their logo from Clearbit's free public logo API. Returns '' if the
+    signatory gave no usable website."""
+    if not url or url == "#":
+        return ""
+    host = re.sub(r"^https?://", "", url, flags=re.I).split("/")[0]
+    host = re.sub(r"^www\.", "", host, flags=re.I)
+    return host.strip().lower()
+
+
 def _country_of(record):
     """Data is stored as 'City, Country' (or just 'Country') -- the stat
     strip counts distinct countries, so pull out the last comma segment."""
@@ -161,13 +172,15 @@ def load_signatories(csv_url, fallback):
             unmapped_categories.add(raw_category)
 
         commitment = _cell(raw_row, _COL["commitment"]) if _COMMITMENT_SHARE_PHRASE in consent else ""
+        url = _normalize_url(_cell(raw_row, _COL["website"]))
 
         rows.append({
             "name": name,
-            "url": _normalize_url(_cell(raw_row, _COL["website"])),
+            "url": url,
             "country": _cell(raw_row, _COL["country"]),
             "categories": [category] if category else ["Operators"],
             "commitment": commitment,
+            "logo_domain": _domain_of(url),
         })
 
     if unmapped_categories:
@@ -746,6 +759,7 @@ _PLACEHOLDER_SIGNATORIES = [
 ]
 
 SIGNATORIES = load_signatories(SIGNATORIES_SHEET_CSV_URL, _PLACEHOLDER_SIGNATORIES)
+SIGNATORIES_ARE_LIVE = SIGNATORIES is not _PLACEHOLDER_SIGNATORIES
 SIGNATORY_COUNTRY_COUNT = len({_country_of(s) for s in SIGNATORIES if _country_of(s)})
 
 QUOTES = [
@@ -843,13 +857,29 @@ def page_signatories():
     def category_pills(cats):
         return "".join(f'<span class="category-pill">{c}</span>' for c in cats)
 
+    def logo_tile(s):
+        domain = s.get("logo_domain", "")
+        if not domain:
+            return '<div class="logo-tile" style="width:64px; height:64px; font-size:0.6rem;">Logo</div>'
+        # Pulled from the signatory's own website via Google's public favicon
+        # service -- no key required. (Clearbit's free public logo API, used
+        # here previously, was retired and now returns 503 for every domain.)
+        # Falls back to the plain placeholder tile if the domain has no icon
+        # on file or the request fails for any reason.
+        logo_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
+        return (f'<div class="logo-tile" style="width:64px; height:64px; padding:4px; overflow:hidden;">'
+                f'<img src="{logo_url}" alt="{s["name"]} logo" loading="lazy" '
+                f'style="max-width:100%; max-height:100%; object-fit:contain;" '
+                f'onerror="this.parentElement.textContent=&#39;Logo&#39;; this.parentElement.style.padding=&#39;8px&#39;;">'
+                f'</div>')
+
     def signatory_card(s):
         cats_attr = "|".join(s["categories"])
         commitment_html = (f'<p class="signatory-commitment">&ldquo;{s["commitment"]}&rdquo;</p>'
                             if s["commitment"] else "")
         return f'''<div class="signatory-card" data-categories="{cats_attr}" data-name="{s["name"]}" data-country="{s["country"]}">
       <div class="signatory-card-top">
-        <div class="logo-tile" style="width:64px; height:64px; font-size:0.6rem;">Logo</div>
+        {logo_tile(s)}
         <div class="category-pills">{category_pills(s["categories"])}</div>
       </div>
       <a href="{s["url"]}" class="signatory-name-link" target="_blank" rel="noopener">{s["name"]}</a>
@@ -861,15 +891,19 @@ def page_signatories():
     category_chips_html = "".join(
         f'<button type="button" class="filter-chip" data-category="{c}">{c}</button>' for c in SIGNATORY_CATEGORIES
     )
+    badge_note_html = "" if SIGNATORIES_ARE_LIVE else (
+        '<div class="badge-note">This is a placeholder list &mdash; connect a live data '
+        'source (spreadsheet or CMS) so it updates automatically as applications are '
+        'approved.</div>'
+    )
 
     directory = f'''<section class="section bg-cream">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Signatories</span>
       <h2>Who has signed the Charter</h2>
-      <p class="lede muted">Category, logo, country, and commitment are pulled live from the signatory database once connected &mdash; shown here as placeholder fields. Category is multi-select in the backend &mdash; filter by one or more below, or search by name or country.</p>
-    </div>
-    <div class="badge-note">This is a placeholder list &mdash; connect a live data source (spreadsheet or CMS) so it updates automatically as applications are approved.</div>
+      <p class="lede muted">Category, logo, country, and commitment are pulled live from the signatory database. Category is multi-select in the backend &mdash; filter by one or more below, or search by name or country.</p>
+    </div>{badge_note_html}
     <div class="filter-bar">
       <div class="filter-chips" id="signatoryFilters">
         <button type="button" class="filter-chip active" data-category="">All</button>

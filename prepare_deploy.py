@@ -43,13 +43,18 @@ def main():
         with open(os.path.join(ROOT, name)) as f:
             html = f.read()
         html = html.replace(
-            '<link rel="stylesheet" href="style.css">',
+            '<link rel="stylesheet" href="css/style.css">',
             f"<style>\n{css}\n</style>",
         )
         html = html.replace(
-            '<script src="main.js"></script>',
+            '<script src="js/main.js"></script>',
             f"<script>\n{js}\n</script>",
         )
+        if "<style>" not in html or "<script>" not in html:
+            raise RuntimeError(
+                f"{name}: expected href/src not found -- check build.py's "
+                "asset tags haven't changed and update this script to match."
+            )
         out_path = os.path.join(DIST, name)
         with open(out_path, "w") as f:
             f.write(html)
