@@ -449,140 +449,164 @@ def closing_cta():
 </section>'''
 
 # ---------------------------------------------------------------------------
+# THE TEN PRINCIPLES (SPEC.md Section 6.3) -- shared between the Home page
+# preview and the full Charter page. Copy is verbatim from the spec; do not
+# rewrite, shorten, or add to it.
+# ---------------------------------------------------------------------------
+PRINCIPLES = [
+    {"num": "01", "name": "Access for All", "icon": "network",
+     "text": "Public sauna-bathing is for all people. Access means a door everyone can afford to walk through, a building every body can use, a culture where all people are welcomed and safe, and locations communities can actually reach."},
+    {"num": "02", "name": "Shared Heat, Shared Space", "icon": "heat",
+     "text": "Built on equality and presence, the public sauna-bath is a shared civic place, promoting the health of people and the living world. Community takes work: everyone who enters helps tend it, and is supported to do so."},
+    {"num": "03", "name": "Honour Tradition", "icon": "leaf",
+     "text": "We honour and support the many cultures and knowledge holders who keep sauna and sweat-bathing alive, entering each tradition as guests."},
+    {"num": "04", "name": "Public Good Before Private Gain", "icon": "sun",
+     "text": "Whatever the ownership model, a public sauna-bath is run for the public good. Profit may serve that mission, but never override it."},
+    {"num": "05", "name": "A Sense of Place", "icon": "place",
+     "text": "At its fullest, a public sauna-bath is a community sauna-bath, shaped by its place: in design, story and benefit. It is built with care for where it stands, carrying both the traditions it comes from and the stories of where it now lives, and keeping value in community rather than extracting it."},
+    {"num": "06", "name": "Community First", "icon": "lattice",
+     "text": "A community sauna-bath answers to its community, shaped by the hands and voices of the people it serves. Visitors are welcomed as guests, in ways that sustain the place rather than strain it."},
+    {"num": "07", "name": "Tended With Care", "icon": "weave",
+     "text": "Built to evidence-informed best practice, maintained for safety, and operated on safer-space principles, a public sauna-bath is stewarded responsibly, so people are treated with dignity and protected from harm."},
+    {"num": "08", "name": "Reciprocity with the Natural World", "icon": "reciprocity",
+     "text": "Public sauna-bathing lives in reciprocity with the natural world that sustains it: powered, built and run to tread lightly, giving back more than taking. It draws people into deepening relationship with the living world, with reverence for the peoples who have long bathed in balance with their surroundings."},
+    {"num": "09", "name": "Wellbeing That Circulates", "icon": "circulate",
+     "text": "Public sauna-bathing builds relational well-being, spreading care outward: for body, mind and spirit, for the bonds between people, for healthy, regenerative local economies. What we learn, we share across borders, building a common body of practice."},
+    {"num": "10", "name": "Recognised and Resourced", "icon": "seal",
+     "text": "Resilient social infrastructure, built responsibly today so communities can thrive for generations to come, deserves recognition and support: from local and regional government in planning, regulation and funding, and from investors who value it as a public good, not a private bet."},
+]
+PRINCIPLES_BY_NUM = {p["num"]: p for p in PRINCIPLES}
+
+PRINCIPLE_GROUPS = [
+    {"tag": "Practice", "sub": "Foundational values", "nums": ["01", "02", "03"]},
+    {"tag": "Keeping", "sub": "Run for public good", "nums": ["04", "05", "06"]},
+    {"tag": "Tending", "sub": "Ongoing care", "nums": ["07", "08"]},
+    {"tag": "Stewardship", "sub": "Shared futures", "nums": ["09", "10"]},
+]
+
+# ---------------------------------------------------------------------------
 # HOME PAGE
 # ---------------------------------------------------------------------------
 def page_home():
-    hero = f'''<section class="hero">
+    hero = f'''<section class="hero" id="hero">
   <div class="container hero-grid">
     <div class="hero-copy">
       <span class="eyebrow">A grassroots global movement</span>
-      <h1>Sauna for All.</h1>
-      <p class="lede">Guiding public sauna-bathing as common good. A charter of ten principles, one global commitment: sauna that evolves with shared values, evidence, and effective collaboration.</p>
+      <h1>SAUNA FOR ALL</h1>
+      <p class="lede">Ten shared principles for public sauna that is safe, accessible, culturally stewarded, and rooted in the common good. Read and sign the Public Sauna-Bathing Charter.</p>
       <div class="hero-actions">
-        <a href="signatories.html#sign" class="btn btn-primary">Sign the Charter</a>
-        <a href="overview.html" class="btn btn-outline-light">Read the Principles</a>
+        <a href="/signatories#sign" class="btn btn-primary">Sign the Charter</a>
+        <a href="/charter#principles" class="btn btn-outline-light">Read the Principles</a>
       </div>
     </div>
     <div class="hero-media placeholder-img">
-      <span>Hero photography — people bathing together, documentary style (not lifestyle/stock). Add final image here.</span>
+      <span>Hero photography &mdash; people bathing together, documentary style (not lifestyle/stock). Add final image here.</span>
     </div>
   </div>
 </section>
-{wave("#b3d3f0", backdrop="#0A382D")}
-<section class="stat-strip">
+{wave("#b3d3f0", backdrop="#0A382D")}'''
+
+    counter = f'''<section class="stat-strip" id="counter">
   <div class="container stat-grid">
     <div class="stat-item"><div class="num">{len(SIGNATORIES)}</div><div class="label">Signatories</div></div>
     <div class="stat-item"><div class="num">{SIGNATORY_COUNTRY_COUNT}</div><div class="label">Countries</div></div>
-    <div class="stat-item"><div class="num">10</div><div class="label">Principles</div></div>
-    <div class="stat-item"><div class="num">&rsquo;26</div><div class="label">Introduced at World Sauna Forum</div></div>
-  </div>
-</section>
-<section class="photo-band">
-  <div class="placeholder-img photo-band-img">
-    <span>Hero photography — people bathing together, documentary style (not lifestyle/stock). Add final image here.</span>
-    {wave_mask("#f7f4e9", edge="bottom")}
+    <div class="stat-item"><div class="num">2026</div><div class="label">Introduced at World Sauna Forum</div></div>
   </div>
 </section>'''
 
-    def band_item(num, name, icon_name):
-        return f'''<a href="overview.html#p{num}" class="principle-item">
-          <span class="icon-plain">{ICONS[icon_name]}</span>
-          <span class="principle-item-text"><span class="num">{num}</span><span class="name">{name}</span></span>
+    def band_item(p):
+        n = p["num"]
+        return f'''<a href="/charter#principle-{int(n)}" class="principle-item">
+          <span class="icon-plain">{ICONS[p["icon"]]}</span>
+          <span class="principle-item-text"><span class="num">{n}</span><span class="name principle-underline-{n}">{p["name"]}</span></span>
         </a>'''
 
-    def movement_band(tag, sub, items_html):
+    def movement_band(group):
+        items_html = "".join(band_item(PRINCIPLES_BY_NUM[n]) for n in group["nums"])
         return f'''<div class="principle-band">
-      <div class="principle-band-head"><span class="tag">{tag}</span><span class="dash">&mdash;</span><span class="sub">{sub}</span></div>
+      <div class="principle-band-head"><span class="tag">{group["tag"]}: {group["sub"]}</span></div>
       <div class="principle-band-grid">
         {items_html}
       </div>
     </div>'''
 
-    principles_preview = f'''<section class="section bg-cream" id="principles">
+    charter_summary = f'''<section class="section bg-cream" id="charter-summary">
   <div class="container">
     <div class="section-head">
-      <span class="eyebrow">The Public Sauna-Bathing Charter</span>
-      <h2>Ten principles in four movements</h2>
-      <p class="lede muted">Sauna is a common good, if done right. The Charter sets out shared principles for the responsible development and stewardship of public sauna &mdash; not a rulebook, a certification, or a standard, but a common reference point.</p>
+      <span class="eyebrow">The Charter</span>
+      <h2>Ten shared principles</h2>
+      <p class="lede muted">Sauna-bathing is growing fast around the world. The Charter helps it grow well, with ten shared principles that keep equality, care, and community at the heart of public sauna.</p>
+      <a href="/charter" class="btn btn-outline-dark" style="margin-top:20px;">Read the full Charter</a>
     </div>
 
     <div class="principle-band-list">
-      {movement_band("Practice", "Foundational Values",
-        band_item("01","Access for All","network") +
-        band_item("02","Shared Heat, Shared Space","heat") +
-        band_item("03","Honour Tradition","leaf"))}
-      {movement_band("Keeping", "Run for Public Good",
-        band_item("04","Public Good Before Private Gain","sun") +
-        band_item("05","A Sense of Place","place") +
-        band_item("06","Community First","lattice"))}
-      {movement_band("Tending", "Ongoing Care",
-        band_item("07","Tended with Care","weave") +
-        band_item("08","Reciprocity with the Natural World","reciprocity"))}
-      {movement_band("Stewardship", "Shared Future",
-        band_item("09","Wellbeing that Circulates","circulate") +
-        band_item("10","Worth Public Support","seal"))}
+      {"".join(movement_band(g) for g in PRINCIPLE_GROUPS)}
     </div>
 
-    <a href="overview.html" class="btn btn-outline-dark" style="margin-top:34px;">Read the full Charter</a>
+    <p class="small" style="margin-top:28px;">What does signing involve? <a href="/faqs" style="text-decoration:underline; font-weight:700;">Read the FAQs</a></p>
   </div>
 </section>'''
 
-    why_now = f'''<section class="section bg-white">
+    why_now = f'''<section class="section bg-white" id="why-now">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Why now</span>
-      <h2>The decisions being made today will shape public sauna for decades to come</h2>
+      <h2>Choices made today will shape public sauna for decades</h2>
     </div>
     <div class="card-grid">
-      <div class="info-card"><h3>Policy and investment are emerging now</h3><p>Municipalities, health systems, tourism organizations, insurers, and regulators are beginning to decide what public sauna is, what outcomes it delivers, and how it should be governed.</p></div>
-      <div class="info-card"><h3>Wellbeing emerges from the whole experience</h3><p>Environment, governance, norms, accessibility, and safety work together. Sauna is more than an amenity or wellness modality.</p></div>
-      <div class="info-card"><h3>Trust must be earned</h3><p>A shared framework lets communities and policymakers recognize responsible practice &mdash; grounded in governance, cultural stewardship, safety, and care, not branding.</p></div>
+      <div class="info-card"><h3>Decisions are being made now</h3><p>Cities, funders, and tourism organisations are starting to decide what public sauna is, what it should deliver, and how it should be run. Shared principles help those decisions rest on real practice and evidence.</p></div>
+      <div class="info-card"><h3>Sauna traditions deserve respect</h3><p>Sauna has been carried by families and communities for generations. As it spreads to new places, the Charter asks that those traditions be understood, honoured, and shared with care.</p></div>
+      <div class="info-card"><h3>Good practice should be easy to see</h3><p>As more saunas open, communities and decision-makers need a clear way to recognise places that are safe, well run, and respectful of sauna culture. The Charter gives them a common reference.</p></div>
     </div>
   </div>
 </section>'''
 
-    evidence = f'''<section class="section bg-mist">
+    evidence = f'''<section class="section" id="evidence" style="background:var(--sand); color:var(--dark-green);">
   <div class="container">
     <div class="section-head">
-      <span class="eyebrow">The evidence</span>
-      <h2>Real, growing benefits from bathing together</h2>
+      <span class="eyebrow">The Evidence</span>
+      <h2>New to sauna or bathing for a lifetime, the benefits run deep</h2>
+      <p class="lede">Research is catching up with what bathers have long known: sauna supports body, mind, and community.</p>
     </div>
     <div class="card-grid-5">
-      <div class="info-card"><h3>Physical health</h3><p>Regular sauna use is linked to lower cardiovascular mortality and stronger heart health, with the effect growing the more often people go.<sup>1</sup></p></div>
-      <div class="info-card"><h3>Mental health</h3><p>Frequent sauna bathing is associated with better long-term mental health, including lower rates of serious psychiatric illness.<sup>2</sup></p></div>
-      <div class="info-card"><h3>Belonging</h3><p>Shared sauna rituals build real emotional bonds &mdash; people feel a deeper sense of belonging through sauna than through many other group activities.<sup>3</sup></p></div>
-      <div class="info-card"><h3>Community connection</h3><p>Public sauna brings strangers into regular contact across ages and backgrounds, turning brief encounters into lasting community ties.<sup>3</sup></p></div>
-      <div class="info-card"><h3>Local &amp; economic value</h3><p><em>Emerging evidence &mdash; case studies to follow.</em> Public saunas anchor local economies and civic life, drawing footfall, tourism, and shared investment into the neighbourhoods that host them.</p></div>
+      <div class="info-card"><h3>Physical health</h3><p>A growing number of studies link regular sauna use to lower cardiovascular mortality, with the benefit growing the more often people go.<sup>1</sup></p></div>
+      <div class="info-card"><h3>Mental health and wellbeing</h3><p>In a large population study in northern Sweden, people who sauna bathe reported better mental health, more energy, and less pain, and mental health scores rose with more frequent bathing.<sup>2</sup></p></div>
+      <div class="info-card"><h3>Why people bathe</h3><p>Regular bathers describe sauna as a place for mental recovery, social togetherness, cleansing, and physical health, all working together.<sup>3</sup></p></div>
+      <div class="info-card"><h3>Belonging</h3><p>Frequent sauna use, especially weekly, is linked to greater health and wellbeing, and part of that benefit comes from a stronger sense of belonging.<sup>4</sup></p></div>
+      <div class="info-card"><h3>Local value</h3><p>Cities already invest in pools and rinks for health and community. Well-run public saunas can offer the same value. <em>Case studies coming soon.</em></p></div>
     </div>
-    <p class="small muted" style="margin-top:16px;">Sources: (1) Laukkanen et al., <em>BMC Medicine</em>, 2018. (2) Laukkanen et al., <em>Medical Principles and Practice</em>, 2018. (3) University of Greenwich, Oxford, Kent, London Interdisciplinary School &amp; British Sauna Society, <em>Social Science &amp; Medicine</em>, 2026. &middot; <a href="about.html" style="text-decoration:underline;">Learn more about our approach &rarr;</a></p>
+    <p class="small" style="margin-top:16px; opacity:0.85;">Sources: (1) Laukkanen et al., <em>BMC Medicine</em>, 2018. (2) Engstr&ouml;m, H&auml;gglund et al., <em>International Journal of Circumpolar Health</em>, 2024. (3) Engstr&ouml;m, Wiell, H&auml;gglund &amp; Lennkvist, <em>International Journal of Circumpolar Health</em>, 2026. (4) Newson, McGrath et al., <em>Social Science &amp; Medicine</em>, 2026.</p>
   </div>
 </section>'''
 
-    why_evidence_block = why_now + evidence
-
-    who_we_are = f'''<section class="section bg-white">
+    who_we_are = f'''<section class="section bg-white" id="who-we-are">
   <div class="container two-col">
     <div>
       <span class="eyebrow" style="color:var(--gold);">Who we are</span>
-      <h2 style="margin:14px 0 18px;">Guided by an international steering group of founding stewards</h2>
-      <p class="lede muted">Practitioners, researchers, community leaders, and organizations committed to strengthening public sauna through knowledge sharing, cultural stewardship, and collective action.</p>
-      <a href="about.html#stewards" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the founding stewards &rarr;</a>
+      <h2 style="margin:14px 0 18px;">Grassroots by design, guided by experience</h2>
+      <p class="lede muted">Sauna for All has grown from the ground up. An international group of founding stewards guides the work, bringing years of experience running public saunas, researching sauna culture, and building community. The movement is shaped by many more: advisors, knowledge holders, operators, and bathers who contribute and help the Charter grow.</p>
+      <div style="margin-top:18px; display:flex; flex-direction:column; gap:8px;">
+        <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">Meet the founding stewards &rarr;</a>
+        <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700;">Support the movement &rarr;</a>
+      </div>
     </div>
-    <div class="logo-row">
-      <div class="logo-tile">Kamu Sauna</div>
-      <div class="logo-tile">Kotisauna</div>
-      <div class="logo-tile">Community Sauna Baths</div>
-      <div class="logo-tile">Community Sauna Network</div>
-      <div class="logo-tile">F&aacute;d Saoil Saunas</div>
-    </div>
+    <img src="/images/photos/sauna-for-all-2026-13.jpg" alt="Founding stewards and network members among the initial signatories of the Charter" style="border-radius:var(--radius-lg); width:100%; height:100%; object-fit:cover;">
   </div>
 </section>'''
 
-    body = hero + principles_preview + why_evidence_block + who_we_are + closing_cta()
+    newsletter = f'''<section class="section bg-cream" id="newsletter">
+  <div class="container" style="max-width:720px; text-align:center;">
+    <h2>Stay close on the bench</h2>
+    <p class="lede muted" style="margin-top:14px;">Follow the Charter as it grows, learn from operators and researchers, and get invitations to online meet-ups. You&rsquo;ll also hear first when we open new rounds for signatories.</p>
+    <a href="{SUBSTACK_URL or '#'}" class="btn btn-solid-orange" style="margin-top:22px; display:inline-block;">Sign up</a>
+  </div>
+</section>'''
+
+    body = hero + counter + charter_summary + why_now + evidence + who_we_are + newsletter
     write("index.html", layout(
         "Home",
         "Sauna for All is a grassroots global movement guiding public sauna-bathing as common good, through the Public Sauna-Bathing Charter.",
-        "index.html", body))
+        "home", body))
 
 # ---------------------------------------------------------------------------
 # OVERVIEW PAGE (the Charter, in full — formerly charter.html)
