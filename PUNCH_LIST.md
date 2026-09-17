@@ -11,29 +11,28 @@ this project doesn't have access to -- before the site can fully launch.
 
 ## 0. Most urgent: the live site hasn't been updated yet
 
-Every change in this rebuild lives on GitHub. **None of it has reached the live
-Cloudflare Worker** -- the deployment step is a manual "upload static files" action in
-the Cloudflare dashboard that needs a logged-in account, so it couldn't be done from
-here. Right now, whoever visits the live `workers.dev` address (or saunaforall.org, once
-that's connected) still sees the old, pre-rebuild site.
+Every change in this rebuild, including the Substack/FAQ/Charter PDF work below, is
+committed locally; the latest commit hasn't reached GitHub yet (this session's browser
+connection dropped mid-push -- it'll go up as soon as it reconnects). Separately, and
+more importantly: **none of it has reached the live Cloudflare Worker** -- the deployment
+step is a manual "upload static files" action in the Cloudflare dashboard that needs a
+logged-in account, so it couldn't be done from here even once GitHub is caught up. Right
+now, whoever visits the live `workers.dev` address (or saunaforall.org, once that's
+connected) still sees the old, pre-rebuild site.
 
-To go live: run `python3 prepare_deploy.py` (writes self-contained pages into `dist/`),
-then go to the Cloudflare dashboard for the `sauna-for-all` Worker and upload every file
-in `dist/` as a new deployment. `CMS_SETUP.md` describes a way to make this automatic
-going forward (Cloudflare Workers Builds), but until that's set up, this manual step is
-needed after every future content change too.
+To go live: run `python3 prepare_deploy.py` (writes self-contained pages, plus the
+photos and Charter PDF they reference, into `dist/`), then go to the Cloudflare dashboard
+for the `sauna-for-all` Worker and upload every file in `dist/` (including the `images/`
+and `files/` subfolders) as a new deployment. `CMS_SETUP.md` describes a way to make this
+automatic going forward (Cloudflare Workers Builds), but until that's set up, this manual
+step is needed after every future content change too.
+
+Also still open: deploying the `workers/substack-feed` Cloudflare Worker itself (see that
+folder's `README.md`), now that the Substack address is known -- needed before the News
+page shows real posts instead of its empty state.
 
 ## 1. Content Becky needs to supply
 
-- **Charter PDF.** The Charter page and several buttons link to
-  `/files/public-sauna-bathing-charter.pdf`, but that file doesn't exist yet ("The Public
-  Sauna-Bathing Charter, August 19, 2026" per SPEC.md's asset list). Downloads will 404
-  until it's added.
-- **FAQ content (V1, 16 Q&As).** SPEC.md calls for the exact text of 16 questions from
-  `/content/faqs.md`, which was never supplied or found in the shared Drive folder. The
-  FAQs page currently shows the 7 real questions that were live on the previous site, as
-  a genuine interim (not fabricated) set, with a note on the page that more are coming.
-  Swap-in instructions are in a code comment at the top of `page_faqs()` in `build.py`.
 - **Style guide PDF.** Never supplied (`SFA_StyleGuide.pdf` in SPEC.md's asset list).
   Colours, type, and icon treatment were built from the rest of the spec and the
   previous site, but haven't been checked against an actual style guide document.
@@ -41,12 +40,6 @@ needed after every future content change too.
   when checked. The site currently uses an inline text wordmark (the same treatment as
   the previous site) rather than a real logo file, in the header and footer of every
   page.
-- **Substack address.** Referenced as `[ADD LINK]` in SPEC.md Section 4 and needed for
-  the News feed. Without it: every "Sign up" and "Newsletter" link on every page (there
-  are about a dozen) currently points nowhere (`#`), and the News page shows its empty
-  state ("News is on its way") instead of real posts. The feed-fetching Cloudflare Worker
-  is already built and tested (`workers/substack-feed/`) -- once the address is known,
-  deploying it is a few `wrangler` commands (see that folder's `README.md`).
 - **Press logos + "all coverage" link.** SPEC.md's "As featured in" section needs at
   least 3 logos from a Drive folder that doesn't exist yet; it stays correctly hidden
   until then. The Section 4 "See all coverage" link is also still `[ADD LINK]`.
@@ -88,11 +81,26 @@ needed after every future content change too.
   decisions in `CMS_SETUP.md`. Not started -- needs a Cloudflare account and a decision
   on which content should be self-editable.
 
-## 4. Already handled, no action needed
+## 4. Recently resolved (this round)
 
-Signatories (live Google Sheet, consent-gated, grouped by organisation), the design
-system, navigation/footer, all eight pages' layout and copy, the Substack feed proxy
-Worker (built and tested, just not deployed), and the Section 9 QA pass (which caught
-and fixed three real bugs this round: hidden em-dash HTML entities on three pages, the
-Home page hero showing literal placeholder text instead of a photo, and a JavaScript
-crash in the signatory logo fallback).
+- **Charter PDF.** The real PDF ("The Public Sauna-Bathing Charter," August 19, 2026, A4)
+  is now at `files/public-sauna-bathing-charter.pdf` -- downloads work.
+- **FAQ content (V1, 16 Q&As).** `page_faqs()` now has the real, verbatim text from the
+  official FAQ v1 document Becky shared via Drive, replacing the old 7-question interim
+  set. The donation and contact placeholders resolve to the Open Collective link and
+  `/contact`; the UNESCO/UN reference links from the source document are preserved.
+- **Substack address.** `SUBSTACK_URL` is set to `https://saunaforall.substack.com`.
+  Every "Sign up"/"Newsletter" link sitewide now points there instead of `#`.
+- **News feed Worker.** Still needs deploying -- see item 0 above; once it's live, set
+  `NEWS_FEED_ENDPOINT` in `build.py` to its URL and the News page will show real posts
+  instead of the empty state.
+
+## 5. Already handled, no action needed
+
+Signatories (live Google Sheet, consent-gated, grouped by organisation -- currently 7,
+after one new signatory joined since the sheet was last read), the design system,
+navigation/footer, all eight pages' layout and copy, the Substack feed proxy Worker
+(built and tested, just not deployed), and the Section 9 QA pass (which caught and fixed
+three real bugs this round: hidden em-dash HTML entities on three pages, the Home page
+hero showing literal placeholder text instead of a photo, and a JavaScript crash in the
+signatory logo fallback).
