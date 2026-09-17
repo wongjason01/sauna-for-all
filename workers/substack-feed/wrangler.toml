@@ -1,0 +1,17 @@
+name = "sauna-for-all-substack-feed"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Refreshes the cached feed every hour even with no visitors, per
+# SPEC.md 7.2 ("The Worker refreshes the feed every hour and stores a
+# copy, so pages still load if Substack is slow"). The worker's own
+# per-request Cache API entry (see worker.js) also expires after an
+# hour, so this is a belt-and-braces warm-up rather than the only thing
+# keeping the cache fresh.
+[triggers]
+crons = ["0 * * * *"]
+
+# Set the real Substack feed address as a secret (not committed here)
+# once it's known:
+#   wrangler secret put SUBSTACK_FEED_URL
+# and paste in e.g. https://saunaforall.substack.com/feed
