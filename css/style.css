@@ -710,8 +710,13 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 .faq-item .faq-caret{ flex:none; width:13px; height:9px; transition: transform 0.2s ease; opacity:0.7; }
 .faq-item[open] .faq-caret{ transform: rotate(180deg); }
 .faq-item .faq-answer{ padding:0 0 24px; }
-.faq-item p{ font-size:0.96rem; opacity:0.85; margin:0; }
+.faq-item p{ font-size:0.96rem; opacity:0.85; margin:0 0 12px; }
+.faq-item p:last-child{ margin-bottom:0; }
 .faq-item a{ color: var(--gold); }
+.faq-item .faq-answer ul{ list-style:disc; margin:4px 0 12px 1.2em; }
+.faq-item .faq-answer ul:last-child{ margin-bottom:0; }
+.faq-item .faq-answer li{ font-size:0.96rem; opacity:0.85; margin-bottom:8px; }
+.faq-item .faq-answer li:last-child{ margin-bottom:0; }
 
 /* ---------- News cards ---------- */
 .news-card{ background: var(--white); border:1px solid rgba(15,77,59,0.12); border-radius: var(--radius-md); overflow:hidden; }
