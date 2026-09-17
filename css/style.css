@@ -708,9 +708,12 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 /* ---------- News cards ---------- */
 .news-card{ background: var(--white); border:1px solid rgba(15,77,59,0.12); border-radius: var(--radius-md); overflow:hidden; }
 .news-card .placeholder-img{ border-radius:0; aspect-ratio: 16/10; }
+.news-card .cover{ display:block; width:100%; aspect-ratio:16/10; object-fit:cover; }
 .news-card-body{ padding: 20px; }
 .news-card h3{ font-size:1.05rem; margin-bottom:8px; }
 .news-card .meta{ font-size:0.82rem; opacity:0.65; margin-bottom:10px; }
+.press-logo{ filter:grayscale(100%); opacity:0.75; transition:filter 0.15s, opacity 0.15s; }
+.press-logo:hover{ filter:grayscale(0%); opacity:1; }
 
 /* ---------- Form-ish blocks (Sign page) ---------- */
 .checklist{ display:flex; flex-direction:column; gap:16px; margin: 26px 0 30px; }
