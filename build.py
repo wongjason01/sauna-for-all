@@ -611,180 +611,150 @@ def page_home():
 # ---------------------------------------------------------------------------
 # OVERVIEW PAGE (the Charter, in full — formerly charter.html)
 # ---------------------------------------------------------------------------
-def page_overview():
-    page_hero = f'''<section class="section bg-cream" style="padding-bottom:0;">
-  <div class="container two-col">
-    <div>
-      <span class="eyebrow" style="color:var(--gold);">The Public Sauna-Bathing Charter</span>
-      <h1 style="font-size:clamp(2rem,4vw,2.9rem); margin:14px 0 20px;">Ten principles for public sauna as common good</h1>
-      <p class="lede muted">A shared set of principles and norms for the responsible development and stewardship of public sauna &mdash; a common point of reference for communities, practitioners, operators, governments, funders, researchers, and industry. A living document that evolves through research, lived experience, and international dialogue.</p>
-      <div class="hero-actions" style="margin-top:26px;">
-        <a href="#" class="btn btn-outline-dark">Download PDF</a>
-        <span class="small muted" style="align-self:center;">Version 1.0 &mdash; dated 2026</span>
-      </div>
-      <div style="margin-top:18px; display:flex; gap:22px; flex-wrap:wrap;">
-        <a href="faqs.html" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Read the FAQs &rarr;</a>
-        <a href="signatories.html#commit" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Contribute to the movement &rarr;</a>
-      </div>
+CHARTER_PDF_URL = "/files/public-sauna-bathing-charter.pdf"
+
+def page_charter():
+    charter_header = f'''<section class="section bg-cream" style="padding-bottom:0;" id="charter-header">
+  <div class="container">
+    <span class="eyebrow" style="color:var(--gold);">The Public Sauna-Bathing Charter</span>
+    <h1 style="font-size:clamp(2rem,4vw,2.9rem); margin:14px 0 20px; max-width:22ch;">Ten principles for public sauna as common good</h1>
+    <p class="lede muted" style="max-width:64ch;">The Charter sets out shared principles for developing and caring for public sauna responsibly. It gives communities, operators, governments, funders, and researchers a common reference point. Signatories commit to showing how these principles guide their decisions and daily practice.</p>
+    <div class="hero-actions" style="margin-top:26px;">
+      <a href="/signatories#sign" class="btn btn-primary">Sign the Charter</a>
+      <a href="{CHARTER_PDF_URL}" class="btn btn-outline-dark">Download PDF</a>
     </div>
-    <div class="placeholder-img" style="aspect-ratio:4/3;"><span>Image: sauna bucket / detail photography</span></div>
+    <p class="small muted" style="margin-top:14px;">Version 1.0, August 19, 2026</p>
+    <div style="margin-top:10px; display:flex; gap:22px; flex-wrap:wrap;">
+      <a href="/faqs" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Read the FAQs &rarr;</a>
+      <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Support our work &rarr;</a>
+    </div>
   </div>
 </section>'''
 
-    def pdetail(num, title, icon_name, css, body, in_practice, draft=False):
-        draft_tag = '<span class="draft-tag">Draft &mdash; pending final Charter language</span>' if draft else ''
-        icon_html = icon(icon_name, css)
-        return f'''<div class="principle-detail" id="p{num}">
+    def pdetail(p):
+        num, name, text = p["num"], p["name"], p["text"]
+        icon_html = icon(p["icon"], f"principle-fill-{num}")
+        return f'''<div class="principle-detail" id="principle-{int(num)}">
       <div class="principle-detail-icon">{icon_html}<span class="num">{num}</span></div>
       <div class="principle-detail-body">
-        <h3>{title}</h3>
-        {draft_tag}
-        <p>{body}</p>
-      </div>
-      <div class="principle-detail-practice">
-        <span class="label">In practice</span>
-        <p>{in_practice}</p>
+        <h3>{name}</h3>
+        <p>{text}</p>
       </div>
     </div>'''
 
-    def movement_head(bar_color, range_label, name, sub, desc):
-        return f'''<div class="movement-title"><span class="bar" style="background:{bar_color};"></span><span class="tag">{range_label} &middot; {name}</span><span class="sub">&mdash; {sub}</span></div>
-      <p class="movement-desc">{desc}</p>'''
+    def movement_head(range_label, tag, sub):
+        return f'''<div class="movement-title"><span class="bar"></span><span class="tag">{range_label} &middot; {tag}</span><span class="sub">&mdash; {sub}</span></div>'''
 
-    movements = f'''<section class="section bg-cream">
+    RANGE_LABELS = {"Practice": "01&ndash;03", "Keeping": "04&ndash;06", "Tending": "07&ndash;08", "Stewardship": "09&ndash;10"}
+
+    def movement(group):
+        rows = "".join(pdetail(PRINCIPLES_BY_NUM[n]) for n in group["nums"])
+        return f'''<div class="movement">
+      {movement_head(RANGE_LABELS[group["tag"]], group["tag"], group["sub"])}
+      <div class="principle-detail-list">{rows}</div>
+    </div>'''
+
+    principles = f'''<section class="section bg-cream" id="principles">
   <div class="container">
-
-    <div class="movement">
-      {movement_head("var(--orange)", "01&ndash;03", "Practice", "Foundational values",
-        "The starting posture for anyone building or supporting public sauna: who it&rsquo;s for, how it&rsquo;s used, and the traditions it draws from.")}
-      <div class="principle-detail-list">
-        {pdetail("01","Access for All","network","ic-tan",
-          "Access means proximity, affordability, accessibility, and belonging &mdash; ensuring public sauna is close enough to reach, affordable enough to use, accessible to every body, and welcoming to all.",
-          "location, pricing, and physical accessibility are evaluated together, not treated as separate decisions made late in a project.")}
-        {pdetail("02","Shared Heat, Shared Space","heat","ic-orange",
-          "Public sauna is built for collective use: heat, steam, and space held in common, designed and governed for bathing together rather than private consumption.",
-          "layouts, session norms, and scheduling are designed around shared use from day one, not retrofitted onto a private model.", draft=True)}
-        {pdetail("03","Honour Tradition","leaf","ic-gold",
-          "Sauna is a living culture, sustained by people, not products. The traditions, values, and practices we inherit deserve to be honoured, shared with care, and stewarded for future generations.",
-          "operators credit the cultural lineages their practice draws from, and involve knowledge holders rather than borrowing aesthetics alone.")}
-      </div>
+    <div class="section-head">
+      <h2>Ten shared principles</h2>
     </div>
-
-    <div class="movement">
-      {movement_head("var(--gold)", "04&ndash;06", "Keeping", "Run for public good",
-        "How public sauna is governed and operated day to day, so the mission comes first even as it grows.")}
-      <div class="principle-detail-list">
-        {pdetail("04","Public Good Before Private Gain","sun","ic-yellow",
-          "Profit can support the mission. It shouldn&rsquo;t replace it.",
-          "surplus is reinvested in access, safety, and community programming before it is distributed as profit.")}
-        {pdetail("05","A Sense of Place","place","ic-lightgreen",
-          "Sauna should strengthen the community it&rsquo;s rooted in, not extract from it.",
-          "hiring, sourcing, and programming favour the local community, and the space reflects the place it stands in.")}
-        {pdetail("06","Community First","lattice","ic-olive",
-          "In a loneliness epidemic, public sauna is one of the few remaining spaces where strangers become regulars, and regulars become community &mdash; that belonging comes before commercial interest.",
-          "pricing and access rules are stress-tested against whether they exclude the regulars a space depends on to feel like community.", draft=True)}
-      </div>
+    {"".join(movement(g) for g in PRINCIPLE_GROUPS)}
+    <div class="info-card" style="margin-top:20px; padding:32px;">
+      <h3 style="font-size:1.15rem;">Putting the principles into practice</h3>
+      <p class="muted" style="margin:10px 0 18px;">Sign up for news to receive practical guidance on applying each principle, along with case studies, resources, and invitations to online meet-ups with operators and communities doing this work.</p>
+      <a href="{SUBSTACK_URL or '#'}" class="btn btn-solid-orange" style="display:inline-block;">Sign up</a>
     </div>
-
-    <div class="movement">
-      {movement_head("var(--blue)", "07&ndash;08", "Tending", "Ongoing care",
-        "The duty of care that keeps a sauna safe, well-run, and in right relationship with the world around it.")}
-      <div class="principle-detail-list">
-        {pdetail("07","Tended with Care","weave","ic-lightblue",
-          "Every public sauna carries a duty of care &mdash; to the people who gather there, the cultures it draws from, and the places that sustain it. This responsibility demands spaces that are safe, well-run, and built to last.",
-          "trained hosts or stewards are present, maintenance is scheduled rather than reactive, and incidents have a clear response process.")}
-        {pdetail("08","Reciprocity with the Natural World","reciprocity","ic-blue",
-          "Wood, water, and fire are finite. Public sauna should give back to the land and resources it depends on, not simply draw from them.",
-          "fuel, water use, and waste are actively managed, and the operation gives back to the ecosystem it draws heat and materials from.", draft=True)}
-      </div>
-    </div>
-
-    <div class="movement">
-      {movement_head("var(--purple)", "09&ndash;10", "Stewardship", "Shared future",
-        "What public sauna owes back to the people and places it serves, over the long term.")}
-      <div class="principle-detail-list">
-        {pdetail("09","Wellbeing that Circulates","circulate","ic-lavender",
-          "Wellbeing is not created in isolation. Public sauna strengthens the relationships, trust, and resilience that enable communities to adapt, recover, and flourish.",
-          "a space measures success partly by the relationships and resilience it builds, not only by visits or revenue.")}
-        {pdetail("10","Worth Public Support","seal","ic-purple",
-          "Community sauna is real social infrastructure, and it should be funded and recognized like it.",
-          "operators make the public-good case for funding and recognition alongside pools, rinks, and other civic infrastructure.")}
-      </div>
-    </div>
-
-    <div class="callout" style="margin-top:8px;">Principles 2, 6, and 8 are draft placeholder copy written from the founding stewards&rsquo; &ldquo;What We Believe&rdquo; values, with an illustrative &ldquo;in practice&rdquo; line added for every principle &mdash; swap in the authoritative Charter text once finalized.</div>
   </div>
 </section>'''
 
-    who_can_sign = f'''<section class="section bg-white">
+    WHO_CAN_SIGN_ROLES = [
+        ("Operators and Keepers", "People who run, host, or tend public saunas that offer published public sessions anyone can attend."),
+        ("Community Sauna Organisations and Networks", "Groups that connect, support, and speak for public and community saunas in their region."),
+        ("Governments and Public Bodies", "Municipalities, Indigenous Nations, and public health and tourism organisations shaping planning, policy, and investment."),
+        ("Designers, Builders and Suppliers", "Architects, builders, manufacturers, and suppliers helping create public saunas that are safe, accessible, and built to last."),
+        ("Researchers and Educators", "People building the evidence, knowledge, and training that help public sauna grow well."),
+        ("Funders and Investors", "Those who support public sauna as a public good and want their investment to reflect that."),
+        ("Bathers and Advocates", "Individuals who believe public sauna should be welcoming, safe, and held for the common good."),
+    ]
+    role_cards_html = "".join(
+        f'<div class="info-card"><h3>{title}</h3><p>{body}</p></div>' for title, body in WHO_CAN_SIGN_ROLES)
+
+    who_can_sign = f'''<section class="section" id="who-can-sign" style="background:var(--light-blue); color:var(--green-dark);">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Who can sign</span>
       <h2>Built by, and for, everyone shaping public sauna</h2>
+      <p class="lede muted">Anyone working to strengthen public sauna as a common good can sign. You don&rsquo;t need to run a sauna. You simply state what you will do, in your own role, to support the Charter&rsquo;s principles.</p>
     </div>
-    <div class="chip-grid">
-      <div class="chip">Founding Stewards</div>
-      <div class="chip">Advisors and Stewards</div>
-      <div class="chip">Operators</div>
-      <div class="chip">Governments and Public Bodies</div>
-      <div class="chip">Designers, Builders and Developers</div>
-      <div class="chip">Industry Partners</div>
-      <div class="chip">Bathers and Community Members</div>
+    <div class="card-grid-4">{role_cards_html}</div>
+    <div class="callout" style="margin-top:28px;">
+      <p style="margin:0 0 10px;"><strong>Two things to know before signing.</strong> A reference from an existing signatory is required. Operators also need to meet the Charter&rsquo;s definition of a public sauna-bath: public sessions people can attend on their own, without a membership, an overnight stay, or buying another product or service.</p>
+      <div style="display:flex; gap:22px; flex-wrap:wrap; font-weight:700;">
+        <a href="/signatories#list" style="text-decoration:underline;">Find a signatory &rarr;</a>
+        <a href="/faqs" style="text-decoration:underline;">Read the full answer in the FAQs &rarr;</a>
+      </div>
     </div>
+    <p class="small" style="margin-top:20px;">The founding stewards and advisors are the Charter&rsquo;s first signatories. Meet them on the <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">About page &rarr;</a></p>
   </div>
 </section>'''
 
-    how_signing_works = f'''<section class="section bg-green">
+    HOW_SIGNING_STEPS = [
+        ("Read the Charter", "Get to know the ten principles and talk them through with your team, board, or council."),
+        ("Find a reference", "Ask an existing signatory, either an individual or an organisation, for a letter or brief statement of reference."),
+        ("Complete the questionnaire", "The form has three parts: Commitment, Contribution, and Consent and Affirmation."),
+        ("Review and welcome", "Applications are reviewed by the founding stewards in intake rounds, two to four times a year. Once confirmed, you join the list of signatories and the wider network, with check-ins on your commitments over time."),
+    ]
+    step_cards_html = "".join(
+        f'<div class="info-card"><h3>{i+1}. {title}</h3><p>{body}</p></div>'
+        for i, (title, body) in enumerate(HOW_SIGNING_STEPS))
+
+    how_signing_works = f'''<section class="section bg-white" id="how-signing-works">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">How signing works</span>
       <h2>Signing is an application, and it asks for real commitments</h2>
-      <p class="lede" style="opacity:0.85;">Takes about 25&ndash;30 minutes. Free, but real &mdash; you apply, and you commit.</p>
+      <p class="lede muted">Signing is free and takes about 15 to 30 minutes. You choose the principles most relevant to your work and say, in your own words, how you will put them into practice.</p>
     </div>
-    <div class="step-grid">
-      <div class="step-card"><div class="step-num">1</div><h3>Discover the Charter</h3><p>Read the ten principles.</p></div>
-      <div class="step-card"><div class="step-num">2</div><h3>Apply to sign</h3><p>Short form: who you are, which category.</p></div>
-      <div class="step-card"><div class="step-num">3</div><h3>Make your commitments</h3><p>How the principles show up in your practice.</p></div>
-      <div class="step-card"><div class="step-num">4</div><h3>Join the list</h3><p>Appear among signatories; connect to the network.</p></div>
+    <div class="card-grid-4">{step_cards_html}</div>
+    <div class="hero-actions" style="margin-top:26px;">
+      <a href="/signatories#sign" class="btn btn-primary">Sign the Charter</a>
+      <a href="/signatories#list" class="btn btn-outline-dark">Find a signatory</a>
     </div>
-    <div style="margin-top:28px;">
-      <a href="signatories.html#sign" class="btn btn-primary">Sign the Charter</a>
+    <p class="small muted" style="margin-top:14px;">The initial intake round is currently open. Join the movement!</p>
+  </div>
+</section>'''
+
+    is_isnt = f'''<section class="section bg-cream" id="is-isnt">
+  <div class="container two-col">
+    <div>
+      <span class="eyebrow" style="color:var(--purple);">What the Charter is</span>
+      <ul class="is-list" style="margin-top:18px;">
+        <li>A shared set of principles for the responsible development and stewardship of public sauna.</li>
+        <li>A common reference point for communities, operators, governments, funders, researchers, and industry.</li>
+        <li>A guide for planning, governance, operations, investment, and policy.</li>
+        <li>A commitment to public sauna that is safe, accessible, culturally respectful, and trustworthy.</li>
+        <li>A foundation for shared guidance, resources, and learning across the movement.</li>
+      </ul>
+    </div>
+    <div>
+      <span class="eyebrow" style="color:var(--brown);">What the Charter isn&rsquo;t</span>
+      <ul class="isnt-list" style="margin-top:18px;">
+        <li><strong>A certification.</strong> It does not certify, audit, or rank public saunas.</li>
+        <li><strong>A rulebook or technical standard.</strong> It sets out shared principles, and leaves technical detail to local codes and expertise.</li>
+        <li><strong>A replacement for regulation.</strong> It works alongside existing laws and safety requirements.</li>
+        <li><strong>A single model for everyone.</strong> It respects diverse cultures, traditions, and local contexts.</li>
+        <li><strong>Fixed in place.</strong> Its principles are written to endure, and any revisions are rare, considered, and made in the open.</li>
+      </ul>
     </div>
   </div>
 </section>'''
 
-    is_isnt = f'''<section class="section bg-white">
-  <div class="container">
-    <div class="two-col">
-      <div>
-        <span class="eyebrow" style="color:var(--gold);">What the Charter is</span>
-        <ul class="checklist" style="margin-top:18px;">
-          <li><span class="box" style="border-color:var(--light-green); background:var(--light-green);"></span><p>A shared set of principles and norms for the responsible development and stewardship of public sauna.</p></li>
-          <li><span class="box" style="border-color:var(--light-green); background:var(--light-green);"></span><p>A common point of reference for communities, practitioners, operators, governments, funders, researchers, and industry.</p></li>
-          <li><span class="box" style="border-color:var(--light-green); background:var(--light-green);"></span><p>A guide for planning, governance, operations, investment, and policy.</p></li>
-          <li><span class="box" style="border-color:var(--light-green); background:var(--light-green);"></span><p>A commitment to public sauna that is safe, accessible, culturally respectful, and trustworthy.</p></li>
-          <li><span class="box" style="border-color:var(--light-green); background:var(--light-green);"></span><p>A living document that evolves through research, lived experience, and international dialogue.</p></li>
-        </ul>
-      </div>
-      <div>
-        <span class="eyebrow" style="color:var(--orange);">What the Charter isn&rsquo;t</span>
-        <ul class="checklist" style="margin-top:18px;">
-          <li><span class="box" style="border-color:var(--orange);"></span><p><strong>Not a certification</strong> &mdash; it does not certify or rank public saunas.</p></li>
-          <li><span class="box" style="border-color:var(--orange);"></span><p><strong>Not a rulebook or technical standard</strong> &mdash; it defines shared principles, not technical specifications.</p></li>
-          <li><span class="box" style="border-color:var(--orange);"></span><p><strong>Not a replacement for regulation</strong> &mdash; it complements existing laws and safety requirements.</p></li>
-          <li><span class="box" style="border-color:var(--orange);"></span><p><strong>Not about standardization</strong> &mdash; it respects diverse cultures, traditions, and local contexts.</p></li>
-          <li><span class="box" style="border-color:var(--orange);"></span><p><strong>Not static</strong> &mdash; it is collaboratively stewarded and openly developed with humility.</p></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>'''
-
-    body = page_hero + movements + who_can_sign + how_signing_works + is_isnt + closing_cta()
-    write("overview.html", layout(
-        "Overview",
-        "The Public Sauna-Bathing Charter: ten principles in four movements, who can sign, and how signing works.",
-        "overview.html", body))
+    body = charter_header + principles + who_can_sign + how_signing_works + is_isnt
+    write("charter.html", layout(
+        "The Charter",
+        "The Public Sauna-Bathing Charter: ten shared principles, who can sign, and how signing works.",
+        "charter", body))
 
 # ---------------------------------------------------------------------------
 # PARTNERS PAGE (merged Sign the Charter + Signatories)
@@ -899,7 +869,7 @@ def page_signatories():
         <div class="info-card">
           <h3>Who can sign</h3>
           <p class="small">Operators, hosts &amp; stewards &middot; Governments &amp; municipalities &middot; Designers, builders &amp; developers &middot; Researchers &amp; knowledge holders &middot; Industry partners &middot; Bathers &amp; community members.</p>
-          <a href="overview.html" style="display:inline-block; margin-top:10px; font-weight:700; text-decoration:underline; font-size:0.9rem;">Read who can sign in full &rarr;</a>
+          <a href="/charter#who-can-sign" style="display:inline-block; margin-top:10px; font-weight:700; text-decoration:underline; font-size:0.9rem;">Read who can sign in full &rarr;</a>
         </div>
       </div>
     </div>
@@ -1113,15 +1083,15 @@ def page_about():
 def page_faqs():
     faqs = [
         ("What is the Public Sauna-Bathing Charter?",
-         'A shared set of principles and norms for the responsible development and stewardship of public sauna &mdash; a common point of reference for communities, practitioners, operators, governments, funders, researchers, and industry. Read the full <a href="overview.html" style="text-decoration:underline; font-weight:700;">Overview &amp; Charter &rarr;</a>.'),
+         'A shared set of principles and norms for the responsible development and stewardship of public sauna &mdash; a common point of reference for communities, practitioners, operators, governments, funders, researchers, and industry. Read the full <a href="/charter" style="text-decoration:underline; font-weight:700;">Charter &rarr;</a>.'),
         ("Who can sign the Charter?",
-         'Founding stewards, advisors and stewards, operators, governments and public bodies, designers, builders and developers, industry partners, and bathers and community members &mdash; see the full list on the <a href="overview.html" style="text-decoration:underline; font-weight:700;">Overview page &rarr;</a>.'),
+         'Founding stewards, advisors and stewards, operators, governments and public bodies, designers, builders and developers, industry partners, and bathers and community members &mdash; see the full list on the <a href="/charter#who-can-sign" style="text-decoration:underline; font-weight:700;">Charter page &rarr;</a>.'),
         ("Is there a cost to sign?",
          "No. Signing is free. It is, however, a genuine application &mdash; it asks for real commitments, not just a signature."),
         ("What happens after I apply?",
          "Your responses go to the founding stewards for review. Once confirmed, you&rsquo;re listed among signatories and welcomed into network channels."),
         ("Is the Charter a certification or standard?",
-         'No. It does not certify or rank public saunas, and it isn&rsquo;t a technical standard or rulebook. It sets out shared principles, not specifications &mdash; see <a href="overview.html" style="text-decoration:underline; font-weight:700;">what the Charter is / isn&rsquo;t &rarr;</a>.'),
+         'No. It does not certify or rank public saunas, and it isn&rsquo;t a technical standard or rulebook. It sets out shared principles, not specifications &mdash; see <a href="/charter#is-isnt" style="text-decoration:underline; font-weight:700;">what the Charter is / isn&rsquo;t &rarr;</a>.'),
         ("How can I get involved if I&rsquo;m not ready to sign?",
          'You can contribute time, funding, expertise, or space &mdash; see <a href="signatories.html#commit" style="text-decoration:underline; font-weight:700;">Commit to the Movement &rarr;</a>, or stay close to the movement through the newsletter on our homepage.'),
         ("Who governs and funds the Charter?",
@@ -1188,7 +1158,7 @@ print("Helpers loaded.")
 
 if __name__ == "__main__":
     page_home()
-    page_overview()
+    page_charter()
     page_signatories()
     page_about()
     page_faqs()
