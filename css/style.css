@@ -559,6 +559,28 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 }
 .field-row input[type=email]:focus{ outline: 2px solid var(--orange); outline-offset:2px; }
 
+/* ---------- Contact form ---------- */
+.field-stack{ display:flex; flex-direction:column; gap:6px; }
+.field-stack .field-label{ font-weight:700; font-size:0.9rem; margin-top:14px; }
+.field-stack .field-label:first-child{ margin-top:0; }
+.field-stack input[type=text],
+.field-stack input[type=email],
+.field-stack select,
+.field-stack textarea{
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid rgba(15,77,59,0.25);
+  font-family:inherit;
+  font-size:0.95rem;
+  background: var(--white);
+  color: var(--ink);
+  width:100%;
+}
+.field-stack textarea{ resize:vertical; }
+.field-stack input:focus,
+.field-stack select:focus,
+.field-stack textarea:focus{ outline: 2px solid var(--orange); outline-offset:2px; }
+
 /* ---------- Logo grid (partners) ---------- */
 .logo-row{ display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
 .logo-tile{
