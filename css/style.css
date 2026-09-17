@@ -697,12 +697,20 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 .quote-card blockquote{ font-size:1.02rem; font-style:italic; margin:0 0 12px; line-height:1.5; }
 .quote-attribution{ font-weight:700; font-size:0.9rem; }
 
-/* ---------- FAQ list ---------- */
+/* ---------- FAQ list (collapsible, closed by default -- SPEC.md 6.7) ---------- */
 .faq-list{ display:flex; flex-direction:column; }
-.faq-item{ padding: 26px 0; border-top: 1px solid rgba(15,77,59,0.12); }
-.faq-item:first-child{ border-top:none; padding-top:10px; }
-.faq-item h3{ margin-bottom:10px; font-size:1.05rem; }
-.faq-item p{ font-size:0.96rem; opacity:0.85; }
+.faq-item{ padding: 4px 0; border-top: 1px solid rgba(15,77,59,0.12); }
+.faq-item:first-child{ border-top:none; }
+.faq-item summary{
+  list-style:none; cursor:pointer; padding:22px 0; margin:0;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  font-weight:700; font-size:1.05rem;
+}
+.faq-item summary::-webkit-details-marker{ display:none; }
+.faq-item .faq-caret{ flex:none; width:13px; height:9px; transition: transform 0.2s ease; opacity:0.7; }
+.faq-item[open] .faq-caret{ transform: rotate(180deg); }
+.faq-item .faq-answer{ padding:0 0 24px; }
+.faq-item p{ font-size:0.96rem; opacity:0.85; margin:0; }
 .faq-item a{ color: var(--gold); }
 
 /* ---------- News cards ---------- */
