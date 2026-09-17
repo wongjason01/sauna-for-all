@@ -6,23 +6,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
 
 :root{
-  /* Brand palette (from style guide) */
-  --green:        #0f4d3b;
-  --green-dark:   #0b3a2c;
-  --orange:       #df804f;
-  --tan:          #e7c196;
-  --gold:         #b78432;
+  /* Brand palette -- exact values from the Sauna for All style guide (SPEC.md Section 3) */
+  --dark-green:   #0A382D;  /* main background AND main text colour */
+  --cream:        #f7f4e9;  /* light section backgrounds */
+  --orange:       #df804f;  /* logo and accents */
+  --sand:         #e7c196;  /* Home: Evidence section background */
+  --light-blue:   #b3d3f0;  /* Charter: Who can sign background; About steward/advisor photo backgrounds */
+  --purple:       #998FDB;  /* check circles in "What the Charter is" */
+  --brown:        #C58E35;  /* cross circles in "What the Charter isn't" */
+
+  /* Legacy/general-use aliases kept so existing components keep working during the rebuild */
+  --green:        var(--dark-green);
+  --green-dark:   var(--dark-green);
+  --ink:          var(--dark-green);
+  --tan:          var(--sand);
+  --gold:         #b78432;  /* general accent (eyebrows, small links) -- distinct from principle 03's brown */
   --yellow:       #fbec82;
-  --light-green:  #afcc77;
+  --light-green:  #afcc90;
   --olive:        #899246;
-  --light-blue:   #b3d3f0;
-  --blue:         #6796ad;
-  --lavender:     #cec3fc;
-  --purple:       #9185d8;
-  --cream:        #f7f4e9;
+  --blue:         #739EB5;
+  --lavender:     #cec9fd;
   --mist:         #eef3ea;
   --white:        #ffffff;
-  --ink:          #12291f;
+
+  /* Principle colours 01-10, in spec order (SPEC.md Section 3) */
+  --principle-01: #e7c196;  /* Access for All */
+  --principle-02: #df804f;  /* Shared Heat, Shared Space */
+  --principle-03: #C58E35;  /* Honour Tradition */
+  --principle-04: #fbec82;  /* Public Good Before Private Gain */
+  --principle-05: #afcc90;  /* A Sense of Place */
+  --principle-06: #969F4C;  /* Community First */
+  --principle-07: #b3d3f0;  /* Tended With Care */
+  --principle-08: #739EB5;  /* Reciprocity with the Natural World */
+  --principle-09: #cec9fd;  /* Wellbeing That Circulates */
+  --principle-10: #998FDB;  /* Recognised and Resourced */
 
   --radius-pill: 999px;
   --radius-md: 14px;
@@ -34,6 +51,41 @@
   --shadow-card: 0 2px 0 rgba(15,77,59,0.08);
   --transition: 180ms ease;
 }
+
+/* Principle colour utilities -- background fill (Charter page icon circles) and
+   underline colour (Homepage icon grid), keyed to the 10 principles above. */
+.principle-fill-01{ background: var(--principle-01); }
+.principle-fill-02{ background: var(--principle-02); }
+.principle-fill-03{ background: var(--principle-03); }
+.principle-fill-04{ background: var(--principle-04); }
+.principle-fill-05{ background: var(--principle-05); }
+.principle-fill-06{ background: var(--principle-06); }
+.principle-fill-07{ background: var(--principle-07); }
+.principle-fill-08{ background: var(--principle-08); }
+.principle-fill-09{ background: var(--principle-09); }
+.principle-fill-10{ background: var(--principle-10); }
+
+.principle-underline-01{ text-decoration-color: var(--principle-01); }
+.principle-underline-02{ text-decoration-color: var(--principle-02); }
+.principle-underline-03{ text-decoration-color: var(--principle-03); }
+.principle-underline-04{ text-decoration-color: var(--principle-04); }
+.principle-underline-05{ text-decoration-color: var(--principle-05); }
+.principle-underline-06{ text-decoration-color: var(--principle-06); }
+.principle-underline-07{ text-decoration-color: var(--principle-07); }
+.principle-underline-08{ text-decoration-color: var(--principle-08); }
+.principle-underline-09{ text-decoration-color: var(--principle-09); }
+.principle-underline-10{ text-decoration-color: var(--principle-10); }
+
+/* Check/cross circles (SPEC.md Section 3, CSS given verbatim) */
+.is-list li::before  { content: "\2713"; background: var(--purple); }
+.isnt-list li::before { content: "\2715"; background: var(--brown); }
+.is-list li::before, .isnt-list li::before {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.5rem; height: 1.5rem; margin-right: .75rem;
+  border-radius: 50%; color: #fff; font-size: .8rem; font-weight: 700;
+  flex-shrink: 0;
+}
+.is-list li, .isnt-list li { display: flex; align-items: flex-start; list-style: none; }
 
 *, *::before, *::after{ box-sizing: border-box; }
 html{ scroll-behavior: smooth; }
@@ -138,6 +190,26 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 }
 .nav-links a:hover, .nav-links a.active{ opacity: 1; border-bottom-color: var(--orange); }
 .nav-cta{ flex-shrink:0; }
+
+.nav-item{ position:relative; display:flex; align-items:center; }
+.nav-item > a{ display:inline-flex; align-items:center; gap:5px; }
+.nav-caret{ width:9px; height:9px; opacity:0.8; }
+.nav-dropdown{
+  position:absolute; top:100%; left:0; margin-top:12px;
+  background: var(--dark-green); border-radius: var(--radius-md);
+  padding:10px; min-width:220px; box-shadow:0 12px 28px rgba(0,0,0,0.22);
+  opacity:0; visibility:hidden; transform:translateY(-6px);
+  transition: opacity var(--transition), transform var(--transition), visibility var(--transition);
+  z-index:20;
+}
+.nav-item:hover .nav-dropdown, .nav-item:focus-within .nav-dropdown{
+  opacity:1; visibility:visible; transform:translateY(0);
+}
+.nav-dropdown a{
+  display:block; padding:9px 12px; border-radius:8px; border-bottom:none;
+  font-size:0.92rem; opacity:0.92; white-space:nowrap;
+}
+.nav-dropdown a:hover{ background: rgba(255,255,255,0.08); opacity:1; }
 .nav-toggle{
   display:none;
   background:none;
@@ -166,6 +238,15 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
   .nav-toggle{ display:inline-flex; flex-shrink:0; }
   .nav-cta{ flex-shrink:0; }
   .nav-cta .btn{ padding: 10px 14px; font-size: 0.68rem; letter-spacing:0.03em; }
+
+  /* Dropdowns collapse into always-visible indented sub-links on mobile */
+  .nav-item{ flex-direction:column; align-items:flex-start; width:100%; }
+  .nav-dropdown{
+    position:static; opacity:1; visibility:visible; transform:none;
+    box-shadow:none; background:transparent; padding:0 0 6px 16px; margin-top:2px; min-width:0;
+  }
+  .nav-dropdown a{ padding:8px 0; font-size:0.9rem; }
+  .nav-caret{ display:none; }
 }
 
 @media (max-width: 460px){
