@@ -549,6 +549,12 @@ PRINCIPLE_GROUPS = [
 # HOME PAGE
 # ---------------------------------------------------------------------------
 def page_home():
+    # Real hero photo (SPEC.md names no specific file for this slot -- see
+    # images/photos/CREDITS.md). This is one of the two Drive photos not
+    # already placed elsewhere on the site (2026-13 is used below in
+    # "who-we-are", 2026-04/05 on About), used here as the best available
+    # interim choice until Becky supplies dedicated hero photography ("people
+    # bathing together, documentary style, not lifestyle/stock").
     hero = f'''<section class="hero" id="hero">
   <div class="container hero-grid">
     <div class="hero-copy">
@@ -560,8 +566,8 @@ def page_home():
         <a href="/charter#principles" class="btn btn-outline-light">Read the Principles</a>
       </div>
     </div>
-    <div class="hero-media placeholder-img">
-      <span>Hero photography &mdash; people bathing together, documentary style (not lifestyle/stock). Add final image here.</span>
+    <div class="hero-media">
+      <img src="/images/photos/sauna-for-all-2026-14.jpg" alt="Sauna culture in Finland, inscribed on UNESCO's Representative List of the Intangible Cultural Heritage of Humanity" style="width:100%; height:100%; object-fit:cover;">
     </div>
   </div>
 </section>
@@ -704,7 +710,7 @@ def page_charter():
     </div>'''
 
     def movement_head(range_label, tag, sub):
-        return f'''<div class="movement-title"><span class="bar"></span><span class="tag">{range_label} &middot; {tag}</span><span class="sub">&mdash; {sub}</span></div>'''
+        return f'''<div class="movement-title"><span class="bar"></span><span class="tag">{range_label} &middot; {tag}</span><span class="sub">&ndash; {sub}</span></div>'''
 
     RANGE_LABELS = {"Practice": "01&ndash;03", "Keeping": "04&ndash;06", "Tending": "07&ndash;08", "Stewardship": "09&ndash;10"}
 
@@ -801,11 +807,11 @@ def page_charter():
     <div>
       <span class="eyebrow" style="color:var(--brown);">What the Charter isn&rsquo;t</span>
       <ul class="isnt-list" style="margin-top:18px;">
-        <li><strong>A certification.</strong> It does not certify, audit, or rank public saunas.</li>
-        <li><strong>A rulebook or technical standard.</strong> It sets out shared principles, and leaves technical detail to local codes and expertise.</li>
-        <li><strong>A replacement for regulation.</strong> It works alongside existing laws and safety requirements.</li>
-        <li><strong>A single model for everyone.</strong> It respects diverse cultures, traditions, and local contexts.</li>
-        <li><strong>Fixed in place.</strong> Its principles are written to endure, and any revisions are rare, considered, and made in the open.</li>
+        <li><span><strong>A certification.</strong> It does not certify, audit, or rank public saunas.</span></li>
+        <li><span><strong>A rulebook or technical standard.</strong> It sets out shared principles, and leaves technical detail to local codes and expertise.</span></li>
+        <li><span><strong>A replacement for regulation.</strong> It works alongside existing laws and safety requirements.</span></li>
+        <li><span><strong>A single model for everyone.</strong> It respects diverse cultures, traditions, and local contexts.</span></li>
+        <li><span><strong>Fixed in place.</strong> Its principles are written to endure, and any revisions are rare, considered, and made in the open.</span></li>
       </ul>
     </div>
   </div>
@@ -1162,17 +1168,17 @@ def page_faqs():
     FAQS_ARE_INTERIM = True
     FAQS = [
         ("What is the Public Sauna-Bathing Charter?",
-         'A shared set of principles and norms for the responsible development and stewardship of public sauna &mdash; a common point of reference for communities, practitioners, operators, governments, funders, researchers, and industry. Read the full <a href="/charter" style="text-decoration:underline; font-weight:700;">Charter &rarr;</a>.'),
+         'A shared set of principles and norms for the responsible development and stewardship of public sauna, a common point of reference for communities, practitioners, operators, governments, funders, researchers, and industry. Read the full <a href="/charter" style="text-decoration:underline; font-weight:700;">Charter &rarr;</a>.'),
         ("Who can sign the Charter?",
-         'Founding stewards, advisors and stewards, operators, governments and public bodies, designers, builders and developers, industry partners, and bathers and community members &mdash; see the full list on the <a href="/charter#who-can-sign" style="text-decoration:underline; font-weight:700;">Charter page &rarr;</a>.'),
+         'Founding stewards, advisors and stewards, operators, governments and public bodies, designers, builders and developers, industry partners, and bathers and community members. See the full list on the <a href="/charter#who-can-sign" style="text-decoration:underline; font-weight:700;">Charter page &rarr;</a>.'),
         ("Is there a cost to sign?",
-         "No. Signing is free. It is, however, a genuine application &mdash; it asks for real commitments, not just a signature."),
+         "No. Signing is free. It is, however, a genuine application: it asks for real commitments, not just a signature."),
         ("What happens after I apply?",
          "Your responses go to the founding stewards for review. Once confirmed, you&rsquo;re listed among signatories and welcomed into network channels."),
         ("Is the Charter a certification or standard?",
-         'No. It does not certify or rank public saunas, and it isn&rsquo;t a technical standard or rulebook. It sets out shared principles, not specifications &mdash; see <a href="/charter#is-isnt" style="text-decoration:underline; font-weight:700;">what the Charter is / isn&rsquo;t &rarr;</a>.'),
+         'No. It does not certify or rank public saunas, and it isn&rsquo;t a technical standard or rulebook. It sets out shared principles, not specifications. See <a href="/charter#is-isnt" style="text-decoration:underline; font-weight:700;">what the Charter is / isn&rsquo;t &rarr;</a>.'),
         ("How can I get involved if I&rsquo;m not ready to sign?",
-         f'You can contribute time, funding, expertise, or space &mdash; see <a href="/signatories#support" style="text-decoration:underline; font-weight:700;">Support our work &rarr;</a>, or stay close to the movement through the newsletter on our homepage.'),
+         f'You can contribute time, funding, expertise, or space: see <a href="/signatories#support" style="text-decoration:underline; font-weight:700;">Support our work &rarr;</a>, or stay close to the movement through the newsletter on our homepage.'),
         ("Who governs and funds the Charter?",
          'Sauna for All is entirely volunteer-led by an international steering group of founding stewards. See <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">Founding Stewards &rarr;</a>.'),
     ]
@@ -1185,7 +1191,7 @@ def page_faqs():
 
     version_line = (
         '<p class="small muted" style="margin-top:14px;">Showing 7 of 16 planned questions. '
-        'The complete FAQ list is on its way &mdash; check back soon, or '
+        'The complete FAQ list is on its way. Check back soon, or '
         '<a href="/contact" style="text-decoration:underline; font-weight:700;">ask us directly &rarr;</a>.</p>'
         if FAQS_ARE_INTERIM else
         '<p class="small muted" style="margin-top:14px;">Version 1, August 19, 2026</p>'
