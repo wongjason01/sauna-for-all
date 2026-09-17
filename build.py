@@ -203,7 +203,7 @@ def logo_svg(color="var(--orange)", h=40):
 # ---------------------------------------------------------------------------
 # Icons (simplified line icons, echoing the style guide icon set)
 # ---------------------------------------------------------------------------
-ICON_STROKE = 'stroke="#0f4d3b" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"'
+ICON_STROKE = 'stroke="#0A382D" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"'
 
 # radial tick marks used for the two "coin edge" badge icons (sun, reciprocity),
 # echoing the dial/rosette rims in the updated icon sheet
@@ -214,7 +214,7 @@ ICONS = {
 "heat": f'<svg viewBox="0 0 32 32"><rect x="5" y="5" width="22" height="22" rx="2" {ICON_STROKE}/><path d="M9 10c1.5 2 1.5 3-0 5s-1.5 3 0 5M15.3 10c1.5 2 1.5 3 0 5s-1.5 3 0 5M21.6 10c1.5 2 1.5 3 0 5s-1.5 3 0 5" {ICON_STROKE}/></svg>',
 "leaf": f'<svg viewBox="0 0 32 32"><path d="M16 27V13" {ICON_STROKE}/><path d="M16 13c0-5 3.5-8.5 8.5-8.5C24.5 9.5 21 13 16 13Z" {ICON_STROKE}/><path d="M16 18c0-4-3-7-7.5-7C8.5 15 12 18 16 18Z" {ICON_STROKE}/></svg>',
 # redesigned: smiling face inside a coin/dial-edged circle (was a literal sun)
-"sun": f'<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" {ICON_STROKE}/><path d="{ICON_TICKS}" {ICON_STROKE}/><circle cx="12" cy="14" r="1" fill="#0f4d3b"/><circle cx="20" cy="14" r="1" fill="#0f4d3b"/><path d="M11 19c1.4 2 3.2 3 5 3s3.6-1 5-3" {ICON_STROKE}/></svg>',
+"sun": f'<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11" {ICON_STROKE}/><path d="{ICON_TICKS}" {ICON_STROKE}/><circle cx="12" cy="14" r="1" fill="#0A382D"/><circle cx="20" cy="14" r="1" fill="#0A382D"/><path d="M11 19c1.4 2 3.2 3 5 3s3.6-1 5-3" {ICON_STROKE}/></svg>',
 "place": f'<svg viewBox="0 0 32 32"><rect x="5" y="5" width="22" height="22" rx="2" {ICON_STROKE}/><circle cx="16" cy="16" r="6.5" {ICON_STROKE}/></svg>',
 "lattice": f'<svg viewBox="0 0 32 32"><rect x="5" y="5" width="22" height="22" rx="2" {ICON_STROKE}/><circle cx="11" cy="11" r="1.7" {ICON_STROKE}/><circle cx="21" cy="11" r="1.7" {ICON_STROKE}/><circle cx="11" cy="21" r="1.7" {ICON_STROKE}/><circle cx="21" cy="21" r="1.7" {ICON_STROKE}/><path d="M11 12.7v6.6M21 12.7v6.6M12.7 11h6.6M12.7 21h6.6" {ICON_STROKE}/></svg>',
 # redesigned: fuller diagonal hatch fill within the frame (was 5 sparser lines)
@@ -236,28 +236,53 @@ def icon(name, css_class="ic-tan"):
 # ---------------------------------------------------------------------------
 # Nav / Footer
 # ---------------------------------------------------------------------------
+# External integration links (SPEC.md Section 4). Substack/press links are
+# still [ADD LINK] placeholders in the spec -- update these three the moment
+# Becky provides them; nothing else in the site needs to change.
+GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf425hWeCCmQFa1IF_nrGu9ihbM8rB3MAqawdu-3lPVfFCtgg/viewform?usp=header"
+OPEN_COLLECTIVE_URL = "https://opencollective.com/sauna_for_all"
+SUBSTACK_URL = ""       # [ADD LINK] -- SPEC.md Section 4
+SUBSTACK_FEED_URL = ""  # [ADD SUBSTACK LINK]/feed -- SPEC.md Section 4
+CONTACT_EMAIL = "hei@saunaforall.org"
+
 NAV_ITEMS = [
-    ("about.html", "About"),
-    ("overview.html", "Overview"),
-    ("signatories.html", "Signatories"),
-    ("news.html", "News"),
-    ("faqs.html", "FAQs"),
+    {"href": "/about", "label": "About", "dropdown": [
+        ("/about", "Our story"),
+        ("/about#stewards", "Founding Stewards"),
+        ("/about#gratitude", "With gratitude"),
+    ]},
+    {"href": "/charter", "label": "The Charter", "dropdown": [
+        ("/charter", "Read the Charter"),
+        ("/resources", "Resources"),
+        ("/faqs", "FAQs"),
+    ]},
+    {"href": "/signatories", "label": "Signatories", "dropdown": None},
+    {"href": "/news", "label": "News", "dropdown": None},
+    {"href": "/contact", "label": "Contact", "dropdown": None},
 ]
 
 def nav(active):
-    active_cls = ' class="active"'
-    links = "\n".join(
-        f'<a href="{href}"{active_cls if href==active else ""}>{label}</a>'
-        for href, label in NAV_ITEMS
-    )
+    def nav_link(item):
+        href, label, dropdown = item["href"], item["label"], item["dropdown"]
+        is_active = active == href.strip("/") or (active == "home" and href == "/")
+        active_attr = ' class="active"' if is_active else ""
+        if not dropdown:
+            return f'<a href="{href}"{active_attr}>{label}</a>'
+        sub_links = "\n".join(f'<a href="{sub_href}">{sub_label}</a>' for sub_href, sub_label in dropdown)
+        caret = '<svg class="nav-caret" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1.5l5 5 5-5"/></svg>'
+        return f'''<div class="nav-item">
+      <a href="{href}"{active_attr}>{label}{caret}</a>
+      <div class="nav-dropdown">{sub_links}</div>
+    </div>'''
+    links = "\n".join(nav_link(item) for item in NAV_ITEMS)
     return f'''<header class="site-header">
   <div class="nav">
-    <a href="index.html" class="nav-logo" aria-label="Sauna For All — home">{logo_svg("#df804f", 34)}</a>
+    <a href="/" class="nav-logo" aria-label="Sauna for All, home">{logo_svg("#df804f", 34)}</a>
     <nav class="nav-links" id="navLinks">
       {links}
     </nav>
     <div class="nav-cta">
-      <a href="signatories.html#sign" class="btn btn-primary">Sign the Charter</a>
+      <a href="/signatories#sign" class="btn btn-primary">Sign the Charter</a>
     </div>
     <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
@@ -270,31 +295,34 @@ def footer():
   <div class="container">
     <div class="footer-grid">
       <div class="footer-col" style="max-width:340px;">
-        <a href="index.html" aria-label="Sauna For All — home">{logo_svg("#e7c196", 36)}</a>
-        <p class="small" style="margin-top:16px; opacity:0.75;">A grassroots global movement guiding public sauna-bathing as common good.</p>
+        <a href="/" aria-label="Sauna for All, home">{logo_svg("#e7c196", 36)}</a>
+        <p class="small" style="margin-top:16px; opacity:0.75;">Public Sauna. Common Good.</p>
       </div>
       <div class="footer-links">
         <div class="footer-col">
-          <h4>Movement</h4>
-          <a href="overview.html">Overview &amp; Charter</a>
-          <a href="signatories.html">Signatories</a>
-          <a href="faqs.html">FAQs</a>
+          <h4>The Charter</h4>
+          <a href="/charter">Read the Charter</a>
+          <a href="/signatories#sign">Sign the Charter</a>
+          <a href="/signatories">Signatories</a>
+          <a href="/resources">Resources</a>
+          <a href="/faqs">FAQs</a>
         </div>
         <div class="footer-col">
           <h4>About</h4>
-          <a href="about.html">About &amp; Founding Stewards</a>
-          <a href="news.html">News</a>
+          <a href="/about">About Sauna for All</a>
+          <a href="/about#stewards">Founding Stewards</a>
+          <a href="/news">News</a>
         </div>
         <div class="footer-col">
-          <h4>Connect</h4>
-          <a href="signatories.html#commit">Contribute</a>
-          <a href="mailto:pelkoreb@uef.fi">pelkoreb@uef.fi</a>
+          <h4>Get involved</h4>
+          <a href="{SUBSTACK_URL or '#'}">Newsletter</a>
+          <a href="{OPEN_COLLECTIVE_URL}">Support our work</a>
+          <a href="/contact">Contact</a>
         </div>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; 2026 Sauna For All. Public Sauna. Common Good.</span>
-      <span>Site draft — v0.1</span>
+      <span>&copy; 2026 Sauna for All</span>
     </div>
   </div>
 </footer>
@@ -308,7 +336,7 @@ def layout(title, description, active, body, body_class=""):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title} — Sauna For All</title>
+<title>{title} | Sauna for All</title>
 <meta name="description" content="{description}">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -440,7 +468,7 @@ def page_home():
     </div>
   </div>
 </section>
-{wave("#b3d3f0", backdrop="#0f4d3b")}
+{wave("#b3d3f0", backdrop="#0A382D")}
 <section class="stat-strip">
   <div class="container stat-grid">
     <div class="stat-item"><div class="num">{len(SIGNATORIES)}</div><div class="label">Signatories</div></div>
