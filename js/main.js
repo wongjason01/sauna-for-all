@@ -14,18 +14,34 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Simple mailto-based placeholder handlers for forms not yet wired to a backend
-  document.querySelectorAll('form').forEach(function (form) {
-    form.addEventListener('submit', function (e) {
+  // Contact form (SPEC.md Section 6.8). There is no backend mail service
+  // wired up yet (see SPEC.md Section 8, open question 2 -- how messages
+  // should reach hei@saunaforall.org is still unanswered), so this opens a
+  // pre-filled mailto: to that inbox as an interim delivery mechanism that
+  // actually works with no server, rather than showing a fake success
+  // message that silently drops the message. Replace with a real fetch()
+  // to a Cloudflare Worker + email service once that's decided.
+  var contactForm = document.getElementById('contactForm');
+  if (contactForm) {
+    var reasonSelect = document.getElementById('contactReason');
+    var params = new URLSearchParams(window.location.search);
+    if (reasonSelect && params.get('reason') === 'media') {
+      reasonSelect.value = 'Media enquiry';
+    }
+    contactForm.addEventListener('submit', function (e) {
       e.preventDefault();
-      var btn = form.querySelector('button[type="submit"]');
-      if (btn) {
-        var original = btn.textContent;
-        btn.textContent = 'Thank you!';
-        setTimeout(function () { btn.textContent = original; }, 2200);
-      }
+      var name = document.getElementById('contactName').value.trim();
+      var email = document.getElementById('contactEmail').value.trim();
+      var reason = reasonSelect.value;
+      var message = document.getElementById('contactMessage').value.trim();
+      var subject = 'Sauna for All contact form: ' + (reason || 'General question');
+      var body = 'Name: ' + name + '\nEmail: ' + email + '\nReason: ' + reason + '\n\n' + message;
+      var mailto = 'mailto:hei@saunaforall.org?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+      window.location.href = mailto;
+      var success = document.getElementById('contactSuccess');
+      if (success) success.style.display = 'block';
     });
-  });
+  }
 
   // Signatories directory: category filter (multi-select toggle chips) + text search
   var filterWrap = document.getElementById('signatoryFilters');
