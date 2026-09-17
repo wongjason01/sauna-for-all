@@ -910,10 +910,14 @@ def page_signatories():
         # Falls back to the plain initials tile if the domain has no icon on
         # file or the request fails for any reason.
         logo_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
+        # The onerror handler grabs the parent reference into a variable
+        # first: setting textContent on the parent removes the <img> from
+        # the DOM, which would otherwise leave `this.parentElement` null
+        # for the very next statement.
         return (f'<div class="logo-tile" style="width:80px; height:80px; padding:4px; overflow:hidden;">'
                 f'<img src="{logo_url}" alt="{s["name"]} logo" loading="lazy" '
                 f'style="max-width:100%; max-height:100%; object-fit:contain;" '
-                f'onerror="this.parentElement.textContent=&#39;{s["name"][:3].upper()}&#39;; this.parentElement.style.padding=&#39;8px&#39;;">'
+                f'onerror="var p=this.parentElement; p.textContent=&#39;{s["name"][:3].upper()}&#39;; p.style.padding=&#39;8px&#39;;">'
                 f'</div>')
 
     def signatory_card(s):
