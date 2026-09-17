@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
       cards.forEach(function (card) {
         var cardCats = (card.dataset.categories || '').split('|');
         var matchesCat = cats.length === 0 || cats.some(function (c) { return cardCats.indexOf(c) !== -1; });
-        var haystack = ((card.dataset.name || '') + ' ' + (card.dataset.country || '')).toLowerCase();
+        var haystack = (card.dataset.search || '').toLowerCase();
         var matchesSearch = q === '' || haystack.indexOf(q) !== -1;
         var show = matchesCat && matchesSearch;
         card.style.display = show ? '' : 'none';
