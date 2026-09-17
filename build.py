@@ -406,7 +406,8 @@ def footer():
     </div>
   </div>
 </footer>
-<script src="js/main.js"></script>'''
+<script src="js/main.js"></script>
+<script src="js/news-feed.js"></script>'''
 
 HEAD_EXTRA = ""
 
@@ -1179,37 +1180,82 @@ def page_faqs():
 # ---------------------------------------------------------------------------
 # NEWS PAGE
 # ---------------------------------------------------------------------------
-def page_news():
-    def card():
-        return f'''<div class="news-card">
-      <div class="placeholder-img"><span>Image</span></div>
-      <div class="news-card-body">
-        <h3>Post or press item title</h3>
-        <div class="meta">Date &middot; Source or author</div>
-        <p class="small muted">One-line summary of the piece, linking out to the original source.</p>
-      </div>
-    </div>'''
+# ---------------------------------------------------------------------------
+# NEWS PAGE (SPEC.md Section 6.5 / 7.2 / 7.5)
+# ---------------------------------------------------------------------------
+# The Cloudflare Worker that fetches and caches the Substack feed (see
+# workers/substack-feed/) -- set to its deployed URL once SUBSTACK_URL is
+# known and the worker is deployed. Empty for now, which js/news-feed.js
+# treats the same as "feed unreachable" and shows the spec's empty state.
+NEWS_FEED_ENDPOINT = ""
 
-    body = f'''<section class="section bg-cream" style="padding-bottom:0;">
+# SPEC.md 7.5: logos live in a "Press logos" Drive folder (not yet shared)
+# with an accompanying "Press links" sheet mapping each to its article.
+# The section stays hidden until at least three exist, so an empty list
+# here is the correct default, not a placeholder to fill by hand later --
+# it should come from that folder once it exists.
+PRESS_LOGOS = []  # [{"name": ..., "logo_url": ..., "article_url": ...}, ...]
+ALL_COVERAGE_URL = ""  # SPEC.md Section 4: [ADD LINK]
+
+def page_news():
+    news_header = f'''<section class="section bg-cream" style="padding-bottom:0;" id="news-header">
   <div class="container">
     <span class="eyebrow" style="color:var(--gold);">News</span>
-    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 8px;">About the movement, in the press</h1>
+    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Stories and updates from the movement</h1>
+    <p class="lede muted" style="max-width:64ch;">News from Sauna for All, and coverage of public sauna and the Charter from around the world.</p>
   </div>
-</section>
-<section class="section bg-cream">
+</section>'''
+
+    updates = f'''<section class="section bg-cream" id="updates">
   <div class="container">
-    <div class="card-grid">
-      {card()}{card()}{card()}
-    </div>
-    <div class="info-card" style="margin-top:32px;">
-      <h3>Press kit</h3>
-      <p>Boilerplate paragraph, logos, and key facts for media &mdash; plus a direct contact. Lives in Google Drive; link it here once available.</p>
+    <div class="card-grid" id="newsGrid" data-feed-endpoint="{NEWS_FEED_ENDPOINT}"></div>
+    <p class="lede muted" id="newsEmpty" style="text-align:center; padding:20px 0;">News is on its way. Sign up to hear first.</p>
+    <div style="text-align:center; margin-top:10px;">
+      <button type="button" id="newsLoadMore" class="btn btn-outline-dark" style="display:none;">Load more</button>
     </div>
   </div>
 </section>'''
+
+    news_newsletter = f'''<section class="section bg-white" id="news-newsletter">
+  <div class="container" style="max-width:640px; text-align:center;">
+    <p class="lede"><strong>Stay close on the bench.</strong> Get updates like these in your inbox.</p>
+    <a href="{SUBSTACK_URL or '#'}" class="btn btn-solid-orange" style="margin-top:14px; display:inline-block;">Sign up</a>
+  </div>
+</section>'''
+
+    featured = ""
+    if len(PRESS_LOGOS) >= 3:
+        logos_html = "".join(
+            f'<a href="{p["article_url"]}" class="logo-tile press-logo" target="_blank" rel="noopener">'
+            f'<img src="{p["logo_url"]}" alt="{p["name"]}" style="max-width:100%; max-height:100%; object-fit:contain;"></a>'
+            for p in PRESS_LOGOS)
+        coverage_link = (f'<a href="{ALL_COVERAGE_URL}" style="text-decoration:underline; font-weight:700;">See all coverage &rarr;</a>'
+                          if ALL_COVERAGE_URL else "")
+        featured = f'''<section class="section bg-cream" id="featured">
+  <div class="container">
+    <div class="section-head">
+      <h2>As featured in</h2>
+    </div>
+    <div class="logo-row">{logos_html}</div>
+    {coverage_link}
+  </div>
+</section>'''
+
+    media = f'''<section class="section bg-white" id="media">
+  <div class="container">
+    <div class="section-head">
+      <h2>For media</h2>
+      <p class="lede muted">Writing about public sauna or the Charter? We&rsquo;re happy to help with background, key facts, logos, photos, and interviews with our founding stewards.</p>
+      <a href="/contact?reason=media" class="btn btn-primary" style="margin-top:18px; display:inline-block;">Contact us</a>
+      <p class="small muted" style="margin-top:12px;">Media enquiries: <a href="mailto:{CONTACT_EMAIL}" style="text-decoration:underline; font-weight:700;">{CONTACT_EMAIL}</a></p>
+    </div>
+  </div>
+</section>'''
+
+    body = news_header + updates + news_newsletter + featured + media
     write("news.html", layout(
         "News",
-        "News and press coverage of the Sauna for All movement and the Public Sauna-Bathing Charter.",
+        "News from Sauna for All, and coverage of public sauna and the Charter from around the world.",
         "news", body))
 
 # ---------------------------------------------------------------------------

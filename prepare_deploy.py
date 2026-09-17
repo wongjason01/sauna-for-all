@@ -25,15 +25,18 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(ROOT, "dist")
 
 PAGES = [
-    "index.html", "about.html", "overview.html",
+    "index.html", "about.html", "charter.html",
     "signatories.html", "news.html", "faqs.html",
+    "resources.html", "contact.html",
 ]
 
 def main():
     with open(os.path.join(ROOT, "css", "style.css")) as f:
         css = f.read()
     with open(os.path.join(ROOT, "js", "main.js")) as f:
-        js = f.read()
+        main_js = f.read()
+    with open(os.path.join(ROOT, "js", "news-feed.js")) as f:
+        news_feed_js = f.read()
 
     if os.path.isdir(DIST):
         shutil.rmtree(DIST)
@@ -47,8 +50,8 @@ def main():
             f"<style>\n{css}\n</style>",
         )
         html = html.replace(
-            '<script src="js/main.js"></script>',
-            f"<script>\n{js}\n</script>",
+            '<script src="js/main.js"></script>\n<script src="js/news-feed.js"></script>',
+            f"<script>\n{main_js}\n</script>\n<script>\n{news_feed_js}\n</script>",
         )
         if "<style>" not in html or "<script>" not in html:
             raise RuntimeError(

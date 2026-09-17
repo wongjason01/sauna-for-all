@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>News | Sauna for All</title>
-<meta name="description" content="News and press coverage of the Sauna for All movement and the Public Sauna-Bathing Charter.">
+<meta name="description" content="News from Sauna for All, and coverage of public sauna and the Charter from around the world.">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="">
@@ -42,41 +42,32 @@
   </div>
 </header>
 <main>
-<section class="section bg-cream" style="padding-bottom:0;">
+<section class="section bg-cream" style="padding-bottom:0;" id="news-header">
   <div class="container">
     <span class="eyebrow" style="color:var(--gold);">News</span>
-    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 8px;">About the movement, in the press</h1>
+    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Stories and updates from the movement</h1>
+    <p class="lede muted" style="max-width:64ch;">News from Sauna for All, and coverage of public sauna and the Charter from around the world.</p>
   </div>
-</section>
-<section class="section bg-cream">
+</section><section class="section bg-cream" id="updates">
   <div class="container">
-    <div class="card-grid">
-      <div class="news-card">
-      <div class="placeholder-img"><span>Image</span></div>
-      <div class="news-card-body">
-        <h3>Post or press item title</h3>
-        <div class="meta">Date &middot; Source or author</div>
-        <p class="small muted">One-line summary of the piece, linking out to the original source.</p>
-      </div>
-    </div><div class="news-card">
-      <div class="placeholder-img"><span>Image</span></div>
-      <div class="news-card-body">
-        <h3>Post or press item title</h3>
-        <div class="meta">Date &middot; Source or author</div>
-        <p class="small muted">One-line summary of the piece, linking out to the original source.</p>
-      </div>
-    </div><div class="news-card">
-      <div class="placeholder-img"><span>Image</span></div>
-      <div class="news-card-body">
-        <h3>Post or press item title</h3>
-        <div class="meta">Date &middot; Source or author</div>
-        <p class="small muted">One-line summary of the piece, linking out to the original source.</p>
-      </div>
+    <div class="card-grid" id="newsGrid" data-feed-endpoint=""></div>
+    <p class="lede muted" id="newsEmpty" style="text-align:center; padding:20px 0;">News is on its way. Sign up to hear first.</p>
+    <div style="text-align:center; margin-top:10px;">
+      <button type="button" id="newsLoadMore" class="btn btn-outline-dark" style="display:none;">Load more</button>
     </div>
-    </div>
-    <div class="info-card" style="margin-top:32px;">
-      <h3>Press kit</h3>
-      <p>Boilerplate paragraph, logos, and key facts for media &mdash; plus a direct contact. Lives in Google Drive; link it here once available.</p>
+  </div>
+</section><section class="section bg-white" id="news-newsletter">
+  <div class="container" style="max-width:640px; text-align:center;">
+    <p class="lede"><strong>Stay close on the bench.</strong> Get updates like these in your inbox.</p>
+    <a href="#" class="btn btn-solid-orange" style="margin-top:14px; display:inline-block;">Sign up</a>
+  </div>
+</section><section class="section bg-white" id="media">
+  <div class="container">
+    <div class="section-head">
+      <h2>For media</h2>
+      <p class="lede muted">Writing about public sauna or the Charter? We&rsquo;re happy to help with background, key facts, logos, photos, and interviews with our founding stewards.</p>
+      <a href="/contact?reason=media" class="btn btn-primary" style="margin-top:18px; display:inline-block;">Contact us</a>
+      <p class="small muted" style="margin-top:12px;">Media enquiries: <a href="mailto:hei@saunaforall.org" style="text-decoration:underline; font-weight:700;">hei@saunaforall.org</a></p>
     </div>
   </div>
 </section>
@@ -122,5 +113,6 @@
   </div>
 </footer>
 <script src="js/main.js"></script>
+<script src="js/news-feed.js"></script>
 </body>
 </html>
