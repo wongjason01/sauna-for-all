@@ -1212,6 +1212,114 @@ def page_news():
         "News and press coverage of the Sauna for All movement and the Public Sauna-Bathing Charter.",
         "news", body))
 
+# ---------------------------------------------------------------------------
+# RESOURCES PAGE (SPEC.md Section 6.6 / 7.6)
+# ---------------------------------------------------------------------------
+RESOURCES = []  # Populated from the "Resources" tab in the signatory
+                 # spreadsheet (Title, Category, Short description, Link,
+                 # Related principles, Date, Show on website) once that tab
+                 # exists. Until then every category shows "Coming soon".
+
+RESOURCE_CATEGORIES = [
+    ("Guidance", "Practical support for applying each principle."),
+    ("Case studies", "Stories from public saunas around the world."),
+    ("Research library", "Studies on sauna, health, wellbeing, and community."),
+    ("Templates and tools", "Shared policies, procedures, and planning documents from signatories."),
+]
+
+def page_resources():
+    def resource_category_card(name, desc):
+        items = [r for r in RESOURCES if r.get("category") == name]
+        if not items:
+            return f'''<div class="info-card">
+      <span class="small muted" style="font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Coming soon</span>
+      <h3 style="margin-top:8px;">{name}</h3>
+      <p>{desc}</p>
+    </div>'''
+        cards = "".join(
+            f'<div class="info-card" style="margin-top:14px;"><span class="category-pill">{name}</span>'
+            f'<h4 style="margin-top:8px;">{r["title"]}</h4><p class="small">{r["description"]}</p>'
+            f'<a href="{r["link"]}" style="text-decoration:underline; font-weight:700;">View resource &rarr;</a></div>'
+            for r in items)
+        return f'<div><h3>{name}</h3><p class="muted">{desc}</p>{cards}</div>'
+
+    categories_html = "".join(resource_category_card(name, desc) for name, desc in RESOURCE_CATEGORIES)
+
+    body = f'''<section class="section bg-cream" style="padding-bottom:0;" id="resources-header">
+  <div class="container">
+    <span class="eyebrow" style="color:var(--gold);">Resources</span>
+    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px; max-width:20ch;">Tools for building public sauna well</h1>
+    <p class="lede muted" style="max-width:64ch;">We&rsquo;re gathering guidance, research, and real examples to help operators, communities, and decision-makers put the Charter&rsquo;s principles into practice.</p>
+  </div>
+</section>
+<section class="section bg-cream">
+  <div class="container">
+    <div class="card-grid-4">{categories_html}</div>
+    <div class="info-card" style="margin-top:28px;">
+      <p style="margin-bottom:14px;">Resources coming soon. Sign up for news to hear when they&rsquo;re ready.</p>
+      <a href="{SUBSTACK_URL or '#'}" class="btn btn-solid-orange" style="display:inline-block;">Sign up</a>
+    </div>
+    <p class="small muted" style="margin-top:20px;">Have a resource to share? Want to collaborate on a case study? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch &rarr;</a></p>
+  </div>
+</section>'''
+    write("resources.html", layout(
+        "Resources",
+        "Guidance, case studies, research, and templates and tools for building public sauna well.",
+        "resources", body))
+
+# ---------------------------------------------------------------------------
+# CONTACT PAGE (SPEC.md Section 6.8)
+# ---------------------------------------------------------------------------
+CONTACT_REASONS = [
+    "General question",
+    "Signing the Charter",
+    "Media enquiry",
+    "Regional partnership",
+    "Supporting our work",
+    "Sharing a resource or case study",
+    "Other",
+]
+
+def page_contact():
+    reason_options_html = "".join(f'<option value="{r}">{r}</option>' for r in CONTACT_REASONS)
+
+    body = f'''<section class="section bg-cream" style="padding-bottom:0;" id="contact-header">
+  <div class="container">
+    <span class="eyebrow" style="color:var(--gold);">Contact</span>
+    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Get in touch</h1>
+    <p class="lede muted" style="max-width:64ch;">Have a question, an idea, or a story to share? We&rsquo;d love to hear from you.</p>
+  </div>
+</section>
+<section class="section bg-cream">
+  <div class="container" style="max-width:640px;">
+    <form id="contactForm" novalidate>
+      <div class="field-stack">
+        <label class="field-label" for="contactName">Name</label>
+        <input type="text" id="contactName" name="name" required>
+
+        <label class="field-label" for="contactEmail">Email</label>
+        <input type="email" id="contactEmail" name="email" required>
+
+        <label class="field-label" for="contactReason">Reason for contacting</label>
+        <select id="contactReason" name="reason" required>
+          <option value="" disabled selected>Choose one&hellip;</option>
+          {reason_options_html}
+        </select>
+
+        <label class="field-label" for="contactMessage">Message</label>
+        <textarea id="contactMessage" name="message" rows="6" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-solid-orange" style="margin-top:22px;">Send message</button>
+      <p class="small muted" id="contactSuccess" style="display:none; margin-top:16px;">Thank you. Your message is on its way, and we&rsquo;ll reply as soon as we can.</p>
+    </form>
+    <p class="small muted" style="margin-top:20px;">Or email <a href="mailto:{CONTACT_EMAIL}" style="text-decoration:underline; font-weight:700;">{CONTACT_EMAIL}</a></p>
+  </div>
+</section>'''
+    write("contact.html", layout(
+        "Contact",
+        "Get in touch with Sauna for All: questions, media enquiries, regional partnerships, and more.",
+        "contact", body))
+
 print("Helpers loaded.")
 
 if __name__ == "__main__":
@@ -1221,4 +1329,6 @@ if __name__ == "__main__":
     page_about()
     page_faqs()
     page_news()
+    page_resources()
+    page_contact()
     print("Build complete.")
