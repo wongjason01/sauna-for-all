@@ -76,14 +76,41 @@ _COMMITMENT_SHARE_PHRASE = "you may share my commitments (section 2) publicly"
 # The category question is single-select but its own answer text sometimes
 # contains a comma (e.g. "Public or community sauna operator, bricks and
 # mortar"), so it must NOT be comma-split like a real multi-select field.
-# Known raw answers seen so far are mapped onto the site's existing filter
-# categories; anything unrecognized falls through unchanged and is logged
-# at build time so it can be added here rather than silently mislabeled.
+# Maps each raw questionnaire answer onto the seven website filter categories
+# from SPEC.md Section 7.1. This will eventually be computed by the
+# "Website filter (auto)" column from the signatory-filters.gs Apps Script
+# (not yet provided), so this map is the interim stand-in; anything
+# unrecognized falls through unchanged and is logged at build time so it can
+# be added here rather than silently mislabeled.
 CATEGORY_MAP = {
-    "public or community sauna operator, bricks and mortar": "Operators",
-    "researcher or educator": "Advisors and Stewards",
-    "sauna organisation or network": "Industry Partners",
+    "public or community sauna operator, bricks and mortar": "Operators and Keepers",
+    "public or community sauna operator, mobile/floating": "Operators and Keepers",
+    # Raw sheet answer for one respondent's mobile/floating operator category
+    # was entered as free text rather than the standard option -- see
+    # data/README.md. Treated as Operators and Keepers per its own wording.
+    "floating don't know if that is mobile": "Operators and Keepers",
+    "sauna organisation or network": "Sauna Organisations and Networks",
+    "wellness organisation": "Sauna Organisations and Networks",
+    "municipality or government, including indigenous nations": "Governments and Public Bodies",
+    "tourism organisation": "Governments and Public Bodies",
+    "public health organisation": "Governments and Public Bodies",
+    "designer or architect": "Designers, Builders and Suppliers",
+    "builder or developer": "Designers, Builders and Suppliers",
+    "manufacturer or supplier": "Designers, Builders and Suppliers",
+    "researcher or educator": "Researchers and Educators",
+    "funder or investor": "Funders and Investors",
+    "individual supporter": "Bathers and Advocates",
 }
+
+SIGNATORY_FILTERS = [
+    "Operators and Keepers",
+    "Sauna Organisations and Networks",
+    "Governments and Public Bodies",
+    "Designers, Builders and Suppliers",
+    "Researchers and Educators",
+    "Funders and Investors",
+    "Bathers and Advocates",
+]
 
 
 def _col_index(letter):
@@ -137,6 +164,17 @@ def _country_of(record):
     return country.split(",")[-1].strip() if country else ""
 
 
+def _join_names(names):
+    """'A' / 'A and B' / 'A, B and C' -- SPEC.md 7.1: 'Show one card under the
+    organisation name, listing everyone who signed for it.'"""
+    names = [n for n in names if n]
+    if len(names) <= 1:
+        return names[0] if names else ""
+    if len(names) == 2:
+        return f"{names[0]} and {names[1]}"
+    return ", ".join(names[:-1]) + f", and {names[-1]}"
+
+
 def load_signatories(csv_url, fallback):
     """Loads approved, consented signatory rows from the live Charter
     questionnaire response sheet (see _COL / consent notes above), mapped
@@ -153,13 +191,13 @@ def load_signatories(csv_url, fallback):
     reader = csv.reader(io.StringIO(text))
     next(reader, None)  # header row
 
-    rows = []
+    people_rows = []
     unmapped_categories = set()
     for raw_row in reader:
         if not any(raw_row):
             continue
-        name = _cell(raw_row, _COL["name"])
-        if not name:
+        person_name = _cell(raw_row, _COL["name"])
+        if not person_name:
             continue
 
         consent = _cell(raw_row, _COL["consent"]).lower()
@@ -173,12 +211,14 @@ def load_signatories(csv_url, fallback):
 
         commitment = _cell(raw_row, _COL["commitment"]) if _COMMITMENT_SHARE_PHRASE in consent else ""
         url = _normalize_url(_cell(raw_row, _COL["website"]))
+        organisation = _cell(raw_row, _COL["organisation"])
 
-        rows.append({
-            "name": name,
+        people_rows.append({
+            "person_name": person_name,
+            "organisation": organisation,
             "url": url,
             "country": _cell(raw_row, _COL["country"]),
-            "categories": [category] if category else ["Operators"],
+            "category": category,
             "commitment": commitment,
             "logo_domain": _domain_of(url),
         })
@@ -187,6 +227,46 @@ def load_signatories(csv_url, fallback):
         print(f"  ! signatories sheet: unrecognized category answer(s), shown as-is: {sorted(unmapped_categories)}")
         print(f"    (add them to CATEGORY_MAP in build.py to match the site's filter categories)")
 
+    if not people_rows:
+        return fallback
+
+    # SPEC.md 7.1: "Multiple people from one organisation: Show one card
+    # under the organisation name, listing everyone who signed for it."
+    # Rows with no organisation (individual supporters / bathers and
+    # advocates) each get their own card, keyed by their own name so they
+    # are never merged with one another.
+    groups = {}
+    order = []
+    for r in people_rows:
+        key = ("org", r["organisation"].strip().lower()) if r["organisation"] else ("person", id(r))
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(r)
+
+    rows = []
+    for key in order:
+        members = groups[key]
+        first = members[0]
+        organisation = first["organisation"]
+        people_names = _join_names([m["person_name"] for m in members])
+        categories = []
+        for m in members:
+            if m["category"] and m["category"] not in categories:
+                categories.append(m["category"])
+        commitment = next((m["commitment"] for m in members if m["commitment"]), "")
+        url = next((m["url"] for m in members if m["url"] and m["url"] != "#"), first["url"])
+        rows.append({
+            "name": organisation or people_names,
+            "signed_by": f"Signed by {people_names}" if organisation else "",
+            "url": url,
+            "country": first["country"],
+            "categories": categories or [],
+            "commitment": commitment,
+            "logo_domain": _domain_of(url),
+        })
+
+    rows.sort(key=lambda s: (_country_of(s), s["name"].lower()))
     return rows or fallback
 
 # ---------------------------------------------------------------------------
@@ -427,26 +507,6 @@ def wave_mask(fill, edge="top", h=64, bumps=5.5, amplitude=18.7, phase=1.5):
     return f'''<div class="wave-mask" style="position:absolute; left:0; right:0; {pos} line-height:0; pointer-events:none; z-index:1;">
 <svg viewBox="0 0 {width} {h}" style="width:100%; height:auto; display:block;"><path fill="{fill}" d="{path_d}"/></svg>
 </div>'''
-
-def closing_cta():
-    return f'''<section class="section bg-white">
-  <div class="container">
-    <div class="closing-grid">
-      <div class="closing-card tan">
-        <h3>Sauna is a common good.<br><em>We intend to keep it that way, together.</em></h3>
-        <a href="signatories.html#sign" class="btn btn-outline-dark" style="align-self:flex-start;">Sign the Charter</a>
-      </div>
-      <div class="closing-card cream">
-        <h3 style="font-size:1.15rem;">Stay close to the movement.</h3>
-        <form class="field-row" onsubmit="return false;">
-          <input type="email" placeholder="email address" required>
-          <button class="btn btn-solid-orange" type="submit">Sign up</button>
-        </form>
-        <p class="small muted">Occasional updates on the Charter, signatories, and events. No spam.</p>
-      </div>
-    </div>
-  </div>
-</section>'''
 
 # ---------------------------------------------------------------------------
 # THE TEN PRINCIPLES (SPEC.md Section 6.3) -- shared between the Home page
@@ -757,118 +817,71 @@ def page_charter():
         "charter", body))
 
 # ---------------------------------------------------------------------------
-# PARTNERS PAGE (merged Sign the Charter + Signatories)
+# SIGNATORIES PAGE
 # ---------------------------------------------------------------------------
-_PLACEHOLDER_SIGNATORIES = [
-    {"name": "Name TBD", "url": "#", "country": "City, Canada",
-     "categories": ["Operators"],
-     "commitment": "Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice."},
-    {"name": "Name TBD", "url": "#", "country": "City, Finland",
-     "categories": ["Advisors and Stewards", "Bathers and Community Members"],
-     "commitment": "Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice."},
-    {"name": "Name TBD", "url": "#", "country": "City, Ireland",
-     "categories": ["Operators"],
-     "commitment": "Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice."},
-    {"name": "Name TBD", "url": "#", "country": "City, England",
-     "categories": ["Governments and Public Bodies"],
-     "commitment": "Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice."},
-    {"name": "Name TBD", "url": "#", "country": "City, Canada",
-     "categories": ["Designers, Builders and Developers"],
-     "commitment": "Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice."},
-    {"name": "Name TBD", "url": "#", "country": "City, Finland",
-     "categories": ["Industry Partners"],
-     "commitment": "Placeholder commitment &mdash; how this signatory reflects the Charter&rsquo;s principles in day-to-day practice."},
-]
+# SPEC.md 7.1: "Before the first confirmed signatories: Our first signatories
+# will appear here soon." -- so the fallback, if the live sheet and the local
+# snapshot are both unreachable, is a genuinely empty list rather than
+# fabricated "Name TBD" placeholder rows.
+_PLACEHOLDER_SIGNATORIES = []
 
 SIGNATORIES = load_signatories(SIGNATORIES_SHEET_CSV_URL, _PLACEHOLDER_SIGNATORIES)
-SIGNATORIES_ARE_LIVE = SIGNATORIES is not _PLACEHOLDER_SIGNATORIES
 SIGNATORY_COUNTRY_COUNT = len({_country_of(s) for s in SIGNATORIES if _country_of(s)})
 
-QUOTES = [
-    {"quote": "Placeholder quote about why this signatory signed and what the Charter means for their work.", "name": "Name TBD", "country": "Canada"},
-    {"quote": "Placeholder quote about why this signatory signed and what the Charter means for their work.", "name": "Name TBD", "country": "Finland"},
-    {"quote": "Placeholder quote about why this signatory signed and what the Charter means for their work.", "name": "Name TBD", "country": "Ireland"},
-]
-
-SIGNATORY_CATEGORIES = [
-    "Founding Stewards", "Advisors and Stewards", "Operators", "Governments and Public Bodies",
-    "Designers, Builders and Developers", "Industry Partners", "Bathers and Community Members",
-]
-
 def page_signatories():
-    hero = f'''<section class="section bg-cream" style="padding-bottom:0;">
-  <div class="container two-col">
-    <div>
-      <span class="eyebrow" style="color:var(--gold);">Signatories</span>
-      <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Sign the Charter, and meet those who already have</h1>
-      <p class="lede muted">Sauna for All is built by the people and organizations shaping public sauna today &mdash; operators, governments, designers, researchers, industry partners, and bathers. Sign the Charter to add your name, or explore who has already committed.</p>
-    </div>
-    <div class="placeholder-img" style="aspect-ratio:4/3;"><span>Image: sauna bucket / detail photography</span></div>
-  </div>
-</section>'''
-
-    commit = f'''<section class="section bg-green" id="commit">
+    signatories_header = f'''<section class="section bg-cream" style="padding-bottom:0;" id="signatories-header">
   <div class="container">
-    <div class="two-col">
-      <div>
-        <span class="eyebrow">Contribute</span>
-        <h2 style="margin:14px 0 18px; color:var(--white);">Commit to the movement</h2>
-        <p class="lede" style="opacity:0.9;">Sauna for All is entirely volunteer-led. This work &mdash; drafting the Charter, building the network, hosting workshops, and keeping this site running &mdash; cannot happen without support like yours and our partners&rsquo;. If you can contribute time, funding, expertise, or space, we want to hear from you.</p>
-      </div>
-      <div class="stack-20">
-        <div class="info-card on-green">
-          <h3 style="color:var(--white);">Ways to support</h3>
-          <p style="color:var(--cream); opacity:0.85;">In-kind space &amp; hosting &middot; funding &amp; grants &middot; research &amp; evaluation &middot; design &amp; build expertise &middot; translation &amp; local coordination.</p>
-        </div>
-        <a href="mailto:pelkoreb@uef.fi" class="btn btn-primary">Get in touch to contribute</a>
-      </div>
+    <span class="eyebrow" style="color:var(--gold);">Signatories</span>
+    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px; max-width:24ch;">Sign the Charter, and meet those who already have</h1>
+    <p class="lede muted" style="max-width:64ch;">Sauna for All is built by the people and organisations shaping public sauna today, from operators and community networks to governments, researchers, builders, and bathers. Explore who has committed, find a signatory to support your application, or apply to join them.</p>
+    <div class="hero-actions" style="margin-top:22px;">
+      <a href="#sign" class="btn btn-primary">Sign the Charter</a>
+      <a href="/charter" class="btn btn-outline-dark">Read the Charter</a>
     </div>
   </div>
 </section>'''
 
-    regional_partners = f'''<section class="section bg-cream">
-  <div class="container">
-    <div class="section-head">
-      <span class="eyebrow">Regional partners</span>
-      <h2>Independent partners coordinating locally</h2>
-      <p class="lede muted">Like Swimmable Cities, independent contacts for certain regions &mdash; for example, the Community Sauna Network. Logos and links to come.</p>
-    </div>
-    <div class="logo-row">
-      <div class="logo-tile">Community Sauna Network</div>
-      <div class="logo-tile">Regional partner</div>
-    </div>
-  </div>
-</section>'''
+    BEFORE_YOU_BEGIN = [
+        ("Build alignment.", "Talk it through with your team, board, or council first."),
+        ("Get a reference.", 'You&rsquo;ll need a letter or statement from an existing signatory. <a href="#list" style="text-decoration:underline; font-weight:700;">Find a signatory &rarr;</a>'),
+        ("Check eligibility.", "Operators need to offer published public sessions people can attend on their own."),
+        ("Set aside 15 to 30 minutes.", "You can&rsquo;t save and return in Google Forms, so it helps to draft your commitments first."),
+    ]
+    before_you_begin_html = "".join(
+        f'<li><strong>{lead}</strong> {rest}</li>' for lead, rest in BEFORE_YOU_BEGIN)
+
+    QUESTIONNAIRE_PARTS = [
+        ("Part A: Commitment.", "Who you are, why you&rsquo;re signing, and the principles and commitments you choose."),
+        ("Part B: Contribution.", "Your stewardship, your part in the sector, research, and looking ahead."),
+        ("Part C: Consent and Affirmation.", ""),
+    ]
+    questionnaire_parts_html = "".join(
+        f'<li><strong>{lead}</strong>{" " + rest if rest else ""}</li>' for lead, rest in QUESTIONNAIRE_PARTS)
 
     sign = f'''<section class="section bg-white" id="sign">
   <div class="container">
-    <div class="badge-note">Signing is an application process &mdash; it asks for real commitments and takes about 30 minutes.</div>
+    <div class="section-head">
+      <span class="eyebrow">Sign the Charter</span>
+      <h2>Signing is an application, and it asks for real commitments</h2>
+      <p class="lede muted">By signing, you commit to the Charter&rsquo;s principles and to showing how they guide your decisions, operations, and stewardship.</p>
+    </div>
     <div class="two-col">
       <div>
-        <h2 style="font-size:clamp(1.7rem,3.4vw,2.2rem); margin-bottom:18px;">Sign the Charter</h2>
-        <p class="lede muted">By signing, you commit to the Charter&rsquo;s principles and to demonstrating how they are reflected in your decisions, operations, and stewardship.</p>
-
-        <ul class="checklist">
-          <li><span class="box"></span><p><strong>Part A &mdash; Commitment:</strong> who you are, why you&rsquo;re signing, your principles and commitments.</p></li>
-          <li><span class="box"></span><p><strong>Part B &mdash; Contribution:</strong> stewardship, the sector, research, looking forward.</p></li>
-          <li><span class="box"></span><p><strong>Part C &mdash; Consent and affirmation.</strong></p></li>
-          <li><span class="box"></span><p>About 25&ndash;30 minutes.</p></li>
-          <li><span class="box"></span><p>Responses go to the founding stewards for review.</p></li>
-        </ul>
-
-        <a href="#" class="btn btn-solid-orange">Open the Questionnaire</a>
-        <p class="small muted" style="margin-top:12px;">Opens in Google Forms.</p>
+        <h3>Before you begin</h3>
+        <ul class="is-list" style="margin-top:14px;">{before_you_begin_html}</ul>
+        <h3 style="margin-top:30px;">The questionnaire has three parts</h3>
+        <ul class="is-list" style="margin-top:14px;">{questionnaire_parts_html}</ul>
+        <a href="{GOOGLE_FORM_URL}" class="btn btn-solid-orange" target="_blank" rel="noopener" style="margin-top:10px; display:inline-block;">Open the questionnaire</a>
+        <p class="small muted" style="margin-top:10px;">Opens in Google Forms.</p>
       </div>
-
       <div class="stack-20">
         <div class="info-card">
           <h3>What happens next</h3>
-          <p>Review by the stewards &rarr; confirmation &rarr; listed among signatories &rarr; welcomed to network channels.</p>
+          <p>The founding stewards review applications together in intake rounds, two to four times a year. Once confirmed, you&rsquo;re listed among the signatories and welcomed into the network. Your commitments are revisited in future check-ins.</p>
         </div>
-        <div class="callout">The questionnaire is hosted on Google Forms. This page sets expectations before you begin.</div>
         <div class="info-card">
           <h3>Who can sign</h3>
-          <p class="small">Operators, hosts &amp; stewards &middot; Governments &amp; municipalities &middot; Designers, builders &amp; developers &middot; Researchers &amp; knowledge holders &middot; Industry partners &middot; Bathers &amp; community members.</p>
+          <p class="small">{" &middot; ".join(SIGNATORY_FILTERS)}</p>
           <a href="/charter#who-can-sign" style="display:inline-block; margin-top:10px; font-weight:700; text-decoration:underline; font-size:0.9rem;">Read who can sign in full &rarr;</a>
         </div>
       </div>
@@ -882,51 +895,48 @@ def page_signatories():
     def logo_tile(s):
         domain = s.get("logo_domain", "")
         if not domain:
-            return '<div class="logo-tile" style="width:64px; height:64px; font-size:0.6rem;">Logo</div>'
+            initials = "".join(w[0] for w in re.split(r"\s+", s["name"]) if w)[:3].upper()
+            return f'<div class="logo-tile" style="width:80px; height:80px; border-radius:50%; border:none; background:var(--light-blue); font-size:0.85rem; font-weight:800; color:var(--green-dark);">{initials}</div>'
         # Pulled from the signatory's own website via Google's public favicon
         # service -- no key required. (Clearbit's free public logo API, used
         # here previously, was retired and now returns 503 for every domain.)
-        # Falls back to the plain placeholder tile if the domain has no icon
-        # on file or the request fails for any reason.
+        # Falls back to the plain initials tile if the domain has no icon on
+        # file or the request fails for any reason.
         logo_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
-        return (f'<div class="logo-tile" style="width:64px; height:64px; padding:4px; overflow:hidden;">'
+        return (f'<div class="logo-tile" style="width:80px; height:80px; padding:4px; overflow:hidden;">'
                 f'<img src="{logo_url}" alt="{s["name"]} logo" loading="lazy" '
                 f'style="max-width:100%; max-height:100%; object-fit:contain;" '
-                f'onerror="this.parentElement.textContent=&#39;Logo&#39;; this.parentElement.style.padding=&#39;8px&#39;;">'
+                f'onerror="this.parentElement.textContent=&#39;{s["name"][:3].upper()}&#39;; this.parentElement.style.padding=&#39;8px&#39;;">'
                 f'</div>')
 
     def signatory_card(s):
         cats_attr = "|".join(s["categories"])
+        search_attr = f'{s["name"]} {s.get("signed_by", "")} {s["country"]}'
         commitment_html = (f'<p class="signatory-commitment">&ldquo;{s["commitment"]}&rdquo;</p>'
                             if s["commitment"] else "")
-        return f'''<div class="signatory-card" data-categories="{cats_attr}" data-name="{s["name"]}" data-country="{s["country"]}">
+        signed_by_html = f'<div class="small muted">{s["signed_by"]}</div>' if s.get("signed_by") else ""
+        name_html = (f'<a href="{s["url"]}" class="signatory-name-link" target="_blank" rel="noopener">{s["name"]}</a>'
+                     if s["url"] and s["url"] != "#" else f'<span class="signatory-name-link">{s["name"]}</span>')
+        return f'''<div class="signatory-card" data-categories="{cats_attr}" data-search="{search_attr}" data-country="{s["country"]}">
       <div class="signatory-card-top">
         {logo_tile(s)}
         <div class="category-pills">{category_pills(s["categories"])}</div>
       </div>
-      <a href="{s["url"]}" class="signatory-name-link" target="_blank" rel="noopener">{s["name"]}</a>
+      {name_html}
+      {signed_by_html}
       <div class="signatory-country">{s["country"]}</div>
       {commitment_html}
     </div>'''
 
     signatories_html = "".join(signatory_card(s) for s in SIGNATORIES)
     category_chips_html = "".join(
-        f'<button type="button" class="filter-chip" data-category="{c}">{c}</button>' for c in SIGNATORY_CATEGORIES
-    )
-    badge_note_html = "" if SIGNATORIES_ARE_LIVE else (
-        '<div class="badge-note">This is a placeholder list &mdash; connect a live data '
-        'source (spreadsheet or CMS) so it updates automatically as applications are '
-        'approved.</div>'
+        f'<button type="button" class="filter-chip" data-category="{c}">{c}</button>' for c in SIGNATORY_FILTERS
     )
 
-    directory = f'''<section class="section bg-cream">
-  <div class="container">
-    <div class="section-head">
-      <span class="eyebrow">Signatories</span>
-      <h2>Who has signed the Charter</h2>
-      <p class="lede muted">Category, logo, country, and commitment are pulled live from the signatory database. Category is multi-select in the backend &mdash; filter by one or more below, or search by name or country.</p>
-    </div>{badge_note_html}
-    <div class="filter-bar">
+    if SIGNATORIES:
+        empty_message = "No signatories match your search yet. Try another filter, or sign up for news to hear when new signatories join."
+        list_html = f'''<div class="filter-bar">
+      <span id="signatoryFilterLabel">Filter by role</span>
       <div class="filter-chips" id="signatoryFilters">
         <button type="button" class="filter-chip active" data-category="">All</button>
         {category_chips_html}
@@ -934,33 +944,81 @@ def page_signatories():
       <input type="search" id="signatorySearch" class="filter-search" placeholder="Search by name or country&hellip;" aria-label="Search signatories">
     </div>
     <div class="signatories-grid" id="signatoriesGrid">{signatories_html}</div>
-    <p class="filter-empty" id="signatoryEmpty">No signatories match your filters yet.</p>
-  </div>
-</section>'''
+    <p class="filter-empty" id="signatoryEmpty">{empty_message}</p>'''
+    else:
+        list_html = '<p class="lede muted">Our first signatories will appear here soon.</p>'
 
-    def quote_card(q):
-        return f'''<div class="quote-card">
-      <blockquote>&ldquo;{q["quote"]}&rdquo;</blockquote>
-      <div class="quote-attribution">{q["name"]}</div>
-      <div class="small muted">{q["country"]}</div>
-    </div>'''
-
-    quotes_html = "".join(quote_card(q) for q in QUOTES)
-
-    commitments = f'''<section class="section bg-white">
+    directory = f'''<section class="section bg-cream" id="list">
   <div class="container">
     <div class="section-head">
-      <span class="eyebrow">Commitments</span>
-      <h2>In their own words</h2>
+      <span class="eyebrow">Signatories</span>
+      <h2>Who has signed the Charter</h2>
+      <p class="lede muted">Meet the people and organisations committed to public sauna as a common good. Filter by role, or search by name or country.</p>
+      <p class="small muted" style="margin-top:10px;">New signatories are confirmed in intake rounds, two to four times a year. Sign up for news to hear when the next round opens.</p>
     </div>
-    <div class="commitments-grid">{quotes_html}</div>
+    {list_html}
   </div>
 </section>'''
 
-    body = hero + sign + directory + commitments + commit + regional_partners + closing_cta()
+    WAYS_TO_HELP = [
+        ("Donate.", "Every contribution goes directly to the work of the movement."),
+        ("Offer space or hosting", "for gatherings and workshops."),
+        ("Share your expertise", "in research, design and building, or translation."),
+        ("Coordinate locally", "by connecting signatories in your region."),
+        ("Partner with us", "through funding, grants, or sponsorship."),
+    ]
+    ways_to_help_html = "".join(
+        f'<li><strong>{lead}</strong> {rest}</li>' for lead, rest in WAYS_TO_HELP)
+
+    support = f'''<section class="section bg-green" id="support">
+  <div class="container">
+    <div class="two-col">
+      <div>
+        <span class="eyebrow">Support our work</span>
+        <h2 style="margin:14px 0 18px; color:var(--white);">Help public sauna grow well</h2>
+        <p class="lede" style="opacity:0.9;">Sauna for All is run by volunteers. Your support helps us look after the Charter, keep this site running, and develop gatherings, training, research, and case studies. Whether you can give funding, time, skills, or space, we&rsquo;d love to hear from you.</p>
+      </div>
+      <div class="stack-20">
+        <div class="info-card on-green">
+          <h3 style="color:var(--white);">Ways to help</h3>
+          <ul class="is-list" style="margin-top:10px; color:var(--cream);">{ways_to_help_html}</ul>
+        </div>
+        <div class="hero-actions">
+          <a href="{OPEN_COLLECTIVE_URL}" class="btn btn-primary">Make a donation</a>
+          <a href="/contact" class="btn btn-outline-light">Get in touch</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>'''
+
+    REGIONAL_PARTNERS = []  # SPEC.md 7.3: populated from the "Regional partners"
+                             # spreadsheet tab, not yet provided -- shows the
+                             # coming-soon line until that source exists.
+    if REGIONAL_PARTNERS:
+        partners_html = "".join(
+            f'<div class="info-card"><h3>{p["name"]}</h3><p class="small muted">{p["region"]}</p><p>{p["description"]}</p>'
+            f'<a href="{p["website"]}" style="text-decoration:underline; font-weight:700;">Visit website &rarr;</a></div>'
+            for p in REGIONAL_PARTNERS)
+        partners_body = f'<div class="card-grid">{partners_html}</div><p class="small muted" style="margin-top:20px;">Interested in coordinating in your region? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch &rarr;</a></p>'
+    else:
+        partners_body = '<p class="lede muted">Regional partners coming soon. Interested in coordinating in your region? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch &rarr;</a></p>'
+
+    regional_partners = f'''<section class="section bg-white" id="regional-partners">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Regional partners</span>
+      <h2>Coordinating locally, connected globally</h2>
+      <p class="lede muted">Public sauna looks different in every place. Regional partners are independent organisations that bring signatories together in their area, share local knowledge, and help the Charter take root where they are.</p>
+    </div>
+    {partners_body}
+  </div>
+</section>'''
+
+    body = signatories_header + sign + directory + support + regional_partners
     write("signatories.html", layout(
         "Signatories",
-        "Sign the Public Sauna-Bathing Charter, see who has already signed, and find out how to contribute to the movement.",
+        "Sign the Public Sauna-Bathing Charter, see who has already signed, and find out how to support the movement.",
         "signatories", body))
 
 # ---------------------------------------------------------------------------
@@ -1093,9 +1151,9 @@ def page_faqs():
         ("Is the Charter a certification or standard?",
          'No. It does not certify or rank public saunas, and it isn&rsquo;t a technical standard or rulebook. It sets out shared principles, not specifications &mdash; see <a href="/charter#is-isnt" style="text-decoration:underline; font-weight:700;">what the Charter is / isn&rsquo;t &rarr;</a>.'),
         ("How can I get involved if I&rsquo;m not ready to sign?",
-         'You can contribute time, funding, expertise, or space &mdash; see <a href="signatories.html#commit" style="text-decoration:underline; font-weight:700;">Commit to the Movement &rarr;</a>, or stay close to the movement through the newsletter on our homepage.'),
+         'You can contribute time, funding, expertise, or space &mdash; see <a href="/signatories#support" style="text-decoration:underline; font-weight:700;">Support our work &rarr;</a>, or stay close to the movement through the newsletter on our homepage.'),
         ("Who governs and funds the Charter?",
-         'Sauna for All is entirely volunteer-led by an international steering group of founding stewards. See <a href="about.html#stewards" style="text-decoration:underline; font-weight:700;">Founding Stewards &rarr;</a>.'),
+         'Sauna for All is entirely volunteer-led by an international steering group of founding stewards. See <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">Founding Stewards &rarr;</a>.'),
     ]
     def faq_item(q, a):
         return f'<div class="faq-item"><h3>{q}</h3><p>{a}</p></div>'
