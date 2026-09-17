@@ -1140,7 +1140,27 @@ def page_about():
 # FAQS PAGE
 # ---------------------------------------------------------------------------
 def page_faqs():
-    faqs = [
+    # SPEC.md 6.7 calls for the exact text of all 16 questions and answers
+    # from /content/faqs.md ("The Public Sauna-Bathing Charter FAQs, V1,
+    # August 19, 2026" -- see Section 5's asset list). That document has not
+    # been supplied -- it is not in the Drive folders pulled for this build,
+    # nor anywhere else in the project. Rather than leave the page empty or
+    # invent nine more questions, this interim list carries over the seven
+    # real questions and answers that were live on the previous site (see
+    # pdf/06-faqs.pdf), so the page is genuinely useful and not fabricated.
+    #
+    # TODO once Becky supplies /content/faqs.md (V1, 16 Q&As):
+    #   1. Replace FAQS below with all 16 questions/answers, verbatim.
+    #   2. Anchors are already id="faq-{n}" in signing order -- keep going
+    #      to faq-16.
+    #   3. In FAQ 8, replace "[Donation link]" with OPEN_COLLECTIVE_URL and
+    #      "[Contact link]" with "/contact".
+    #   4. In FAQ 16, show the email as hei@saunaforall.org and link
+    #      "www.saunaforall.org" to "/".
+    #   5. Remove the FAQS_ARE_INTERIM callout and restore the spec's small
+    #      line: "Version 1, August 19, 2026".
+    FAQS_ARE_INTERIM = True
+    FAQS = [
         ("What is the Public Sauna-Bathing Charter?",
          'A shared set of principles and norms for the responsible development and stewardship of public sauna &mdash; a common point of reference for communities, practitioners, operators, governments, funders, researchers, and industry. Read the full <a href="/charter" style="text-decoration:underline; font-weight:700;">Charter &rarr;</a>.'),
         ("Who can sign the Charter?",
@@ -1152,19 +1172,31 @@ def page_faqs():
         ("Is the Charter a certification or standard?",
          'No. It does not certify or rank public saunas, and it isn&rsquo;t a technical standard or rulebook. It sets out shared principles, not specifications &mdash; see <a href="/charter#is-isnt" style="text-decoration:underline; font-weight:700;">what the Charter is / isn&rsquo;t &rarr;</a>.'),
         ("How can I get involved if I&rsquo;m not ready to sign?",
-         'You can contribute time, funding, expertise, or space &mdash; see <a href="/signatories#support" style="text-decoration:underline; font-weight:700;">Support our work &rarr;</a>, or stay close to the movement through the newsletter on our homepage.'),
+         f'You can contribute time, funding, expertise, or space &mdash; see <a href="/signatories#support" style="text-decoration:underline; font-weight:700;">Support our work &rarr;</a>, or stay close to the movement through the newsletter on our homepage.'),
         ("Who governs and funds the Charter?",
          'Sauna for All is entirely volunteer-led by an international steering group of founding stewards. See <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">Founding Stewards &rarr;</a>.'),
     ]
-    def faq_item(q, a):
-        return f'<div class="faq-item"><h3>{q}</h3><p>{a}</p></div>'
-    faqs_html = "".join(faq_item(q, a) for q, a in faqs)
+
+    def faq_item(n, q, a):
+        return (f'<details class="faq-item" id="faq-{n}">'
+                f'<summary>{q}<svg class="faq-caret" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1.5l5 5 5-5"/></svg></summary>'
+                f'<div class="faq-answer"><p>{a}</p></div></details>')
+    faqs_html = "".join(faq_item(i, q, a) for i, (q, a) in enumerate(FAQS, start=1))
+
+    version_line = (
+        '<p class="small muted" style="margin-top:14px;">Showing 7 of 16 planned questions. '
+        'The complete FAQ list is on its way &mdash; check back soon, or '
+        '<a href="/contact" style="text-decoration:underline; font-weight:700;">ask us directly &rarr;</a>.</p>'
+        if FAQS_ARE_INTERIM else
+        '<p class="small muted" style="margin-top:14px;">Version 1, August 19, 2026</p>'
+    )
 
     body = f'''<section class="section bg-cream" style="padding-bottom:0;">
   <div class="container">
     <span class="eyebrow" style="color:var(--gold);">FAQs</span>
     <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Frequently asked questions</h1>
     <p class="lede muted" style="max-width:64ch;">Answers to common questions about signing, the Charter&rsquo;s scope, and governance.</p>
+    {version_line}
   </div>
 </section>
 <section class="section bg-cream">
