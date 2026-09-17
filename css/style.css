@@ -611,6 +611,10 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 /* ---------- Filter bar (Signatories directory) ---------- */
 .filter-bar{ display:flex; flex-wrap:wrap; align-items:center; gap:16px; justify-content:space-between; margin: 22px 0 8px; }
 .filter-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+#signatoryFilterLabel{ display:none; font-weight:700; width:100%; }
+@media (max-width: 700px){
+  #signatoryFilterLabel{ display:block; }
+}
 .filter-chip{
   font-family:inherit;
   font-size:0.8rem;
