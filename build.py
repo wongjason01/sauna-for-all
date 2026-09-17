@@ -991,40 +991,57 @@ def page_signatories():
     write("signatories.html", layout(
         "Signatories",
         "Sign the Public Sauna-Bathing Charter, see who has already signed, and find out how to contribute to the movement.",
-        "signatories.html", body))
+        "signatories", body))
 
 # ---------------------------------------------------------------------------
 # ABOUT PAGE (mission + founding stewards, combined)
 # ---------------------------------------------------------------------------
 def page_about():
-    stewards = ["Becky Pelkonen","Charlie Duckworth","Polly Wilson","Freddie Mehigan","Steve Crosbie",
-                "Ian Whelan","Niamh Murphy","Juho Pelkonen","Jason Wong","Azar Eskandarpour"]
-    def person(name):
+    STEWARDS = [
+        ("Becky Pelkonen", "Kamu Sauna", "Canada"),
+        ("Polly Wilson", "Community Sauna Baths", "United Kingdom"),
+        ("Charlie Duckworth", "Community Sauna Baths", "United Kingdom"),
+        ("Freddie Mehigan", "Community Sauna Network", "United Kingdom"),
+        ("Ian Whelan", "Fád Saoil Saunas", "Ireland"),
+        ("Steve Crosbie", "Fád Saoil Saunas", "Ireland"),
+        ("Jason Wong", "Kotisauna", "Canada"),
+        ("Azar Eskandarpour", "Humans Who Bathe", "Mexico"),
+        ("Juho Pelkonen", "Kamu Sauna", "Canada"),
+        ("Niamh Murphy", "Kamu Sauna", "Canada"),
+    ]
+    ADVISORS = [
+        ("Mikkel Aaland", "author and sauna historian, United States"),
+        ("Dalva Lamminmäki", "folklorist and sauna researcher, Finland"),
+    ]
+
+    def person(name, role):
         initials = "".join([p[0] for p in name.split()[:2]])
-        return f'''<div class="person"><div class="avatar">{initials}</div><div class="name">{name}</div><div class="role">Founding Steward</div></div>'''
+        return f'''<div class="person"><div class="avatar">{initials}</div><div class="name">{name}</div><div class="role">{role}</div></div>'''
 
-    people_html = "".join(person(s) for s in stewards)
+    stewards_html = "".join(person(name, f"{org}, {country}") for name, org, country in STEWARDS)
+    advisors_html = "".join(person(name, role) for name, role in ADVISORS)
+    advisors_html += '''<div class="person"><div class="avatar" style="font-size:0.62rem; font-weight:700; text-align:center; padding:6px; line-height:1.15;">Sauna From Finland</div><div class="name">Sauna from Finland</div></div>'''
 
-    body = f'''<section class="section bg-cream" style="padding-bottom:0;">
+    body = f'''<section class="section bg-cream" style="padding-bottom:0;" id="story">
   <div class="container">
-    <span class="eyebrow" style="color:var(--gold);">About the movement</span>
     <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 18px;">Public sauna as common good</h1>
-    <p class="lede muted" style="max-width:64ch;">Around the world, people are rediscovering the value of public sauna &mdash; not only for individual wellbeing, but for community life. <em>Sauna for All</em> is a grassroots movement guiding this resurgence through shared values, evidence, and effective collaboration, so that public sauna continues to evolve as trusted civic and cultural infrastructure rooted in the common good.</p>
+    <p class="lede muted" style="max-width:64ch;">Around the world, people are rediscovering public sauna, both for their own wellbeing and for the life it brings to communities. Sauna for All is a grassroots movement guiding this resurgence through shared values, evidence, and collaboration. Our aim is for public sauna to grow as a trusted part of civic and cultural life, rooted in the common good.</p>
     <a href="#stewards" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the founding stewards &rarr;</a>
   </div>
 </section>
 
-<section class="section bg-cream">
+<section class="section bg-cream" id="what-we-do">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">What we do</span>
       <h2>A charter, a network, and a shared voice</h2>
     </div>
     <div class="card-grid">
-      <div class="info-card"><h3>1. A charter</h3><p>Shared principles shaped by the people doing the work, not any one group&rsquo;s rules.</p></div>
-      <div class="info-card"><h3>2. A network</h3><p>Operators, hosts, trainers, researchers, and stewards, so no one builds alone. In development &mdash; WhatsApp group for now.</p></div>
-      <div class="info-card"><h3>3. A shared voice</h3><p>Strong enough for funders, cities, and policymakers to hear, and to recognize community sauna as worth investing in.</p></div>
+      <div class="info-card"><h3>1. A charter</h3><p>Ten shared principles, shaped together by the people who build and run public sauna.</p></div>
+      <div class="info-card"><h3>2. A network</h3><p>We connect operators, hosts, trainers, researchers, and stewards so no one has to build alone. Signatories can join our online community to share ideas and meet others doing this work.</p></div>
+      <div class="info-card"><h3>3. A shared voice</h3><p>Together, we help funders, cities, and policymakers see community sauna as something worth investing in and planning for well.</p></div>
     </div>
+    <a href="{OPEN_COLLECTIVE_URL}" class="btn btn-primary" style="margin-top:26px; display:inline-block;">Support our work</a>
   </div>
 </section>
 
@@ -1033,55 +1050,62 @@ def page_about():
     <div class="section-head">
       <span class="eyebrow">Founding Stewards</span>
       <h2>Guided by an international steering group</h2>
-      <p class="lede muted">Practitioners, researchers, community leaders, and organizations committed to strengthening public sauna through knowledge sharing, cultural stewardship, and collective action.</p>
+      <p class="lede muted">The founding stewards are practitioners, researchers, and community leaders who run, study, and champion public sauna in their own communities. Together, they care for the Charter, support signatories in keeping their commitments, and help build the shared knowledge and research that strengthen public sauna around the world.</p>
     </div>
-    <div class="people-grid">{people_html}</div>
+    <div class="people-grid">{stewards_html}</div>
+    <p class="small muted" style="margin-top:34px; font-weight:700;">With Special Thanks to Advisors</p>
+    <div class="people-grid" style="grid-template-columns:repeat(3,1fr); max-width:640px; margin-top:14px;">{advisors_html}</div>
   </div>
 </section>
 
-<section class="section bg-cream">
-  <div class="container">
-    <div class="card-grid">
-      <div class="info-card">
-        <h3>Advisors</h3>
-        <p>With gratitude to those who generously shared knowledge, guidance, and encouragement throughout the Charter&rsquo;s development: Sauna From Finland, Dalva Lamminm&auml;ki, Mikkel Aaland, Lorna Little, Alan Jalasjaa, and Glen Auerbach.</p>
-      </div>
-      <div class="info-card">
-        <h3>Founding organizations</h3>
-        <div class="logo-row" style="margin-top:6px;">
-          <div class="logo-tile" style="width:96px; height:56px; font-size:0.65rem;">Kamu Sauna</div>
-          <div class="logo-tile" style="width:96px; height:56px; font-size:0.65rem;">Kotisauna</div>
-          <div class="logo-tile" style="width:96px; height:56px; font-size:0.65rem;">Community Sauna Baths</div>
-        </div>
-      </div>
-      <div class="info-card">
-        <h3>Meet the wider network</h3>
-        <p>See partner organizations and signatories on the <a href="signatories.html" style="text-decoration:underline; font-weight:700;">Signatories page &rarr;</a>.</p>
-      </div>
+<section class="section bg-cream" id="gratitude">
+  <div class="container two-col">
+    <div>
+      <span class="eyebrow">With gratitude</span>
+      <h2>Many have carried the water</h2>
+      <p class="lede muted">People across the sauna world have shared their knowledge, guidance, and encouragement as the Charter took shape. We thank Sauna from Finland for early support and advice, and for welcoming this work at the World Sauna Forum. We thank the organisers of the International Sauna Congress for making room for this conversation. And we thank the grassroots organisers in Finland and around the world who have stepped forward as early signatories.</p>
+      <a href="/signatories" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the signatories and wider network &rarr;</a>
+    </div>
+    <div>
+      <img src="/images/photos/sauna-for-all-2026-04.jpg" alt="Sauna networking and community gathering as part of the World Sauna Forum in Jyväskylä, Finland" style="border-radius:var(--radius-lg); width:100%; height:100%; object-fit:cover;">
     </div>
   </div>
 </section>
 
-<section class="section bg-white">
+<section class="section bg-white" id="get-involved">
   <div class="container">
-    <div class="two-col">
+    <div class="section-head">
+      <span class="eyebrow">Get involved</span>
+      <h2>Want to help shape what comes next?</h2>
+    </div>
+    <div class="card-grid-4">
       <div class="info-card">
-        <h3>Action plan</h3>
-        <p>Finalize Charter and gain initial signatories &middot; run online workshops for identified signatories &middot; develop and launch this website &middot; roll out case studies, a research database, and socials &middot; UK-based conference (November 2026, led by CSB and CSN) &middot; develop a Report on Public Sauna &middot; work toward measurement tools and an &ldquo;Index&rdquo; for best practice.</p>
+        <h3>1. Stay close on the bench</h3>
+        <p>Follow the Charter as it grows, learn from operators and researchers, and get invitations to online meet-ups. You&rsquo;ll also hear first when we open new rounds for signatories.</p>
+        <a href="{SUBSTACK_URL or '#'}" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Sign up</a>
       </div>
       <div class="info-card">
-        <h3>Get in touch</h3>
-        <p>Becky Pelkonen and the Community Sauna Network, founding stewards.</p>
-        <a href="mailto:pelkoreb@uef.fi" style="display:inline-block; margin-top:10px; font-weight:700; text-decoration:underline;">pelkoreb@uef.fi</a>
-        <p class="small muted" style="margin-top:8px;">No contact form at launch &mdash; email directly.</p>
+        <h3>2. Sign the Charter</h3>
+        <p>Ready to commit? Signing means sharing how the Charter&rsquo;s principles show up in your work. The form takes about 15 to 30 minutes, and we&rsquo;re happy to help along the way.</p>
+        <a href="/signatories#sign" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Sign the Charter</a>
+      </div>
+      <div class="info-card">
+        <h3>3. Support our work</h3>
+        <p>Sauna for All is run by volunteers at this time. Your contribution helps with Charter administration, our website, future gatherings, and initial research and case study development projects.</p>
+        <a href="{OPEN_COLLECTIVE_URL}" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Make a donation</a>
+      </div>
+      <div class="info-card">
+        <h3>4. Contact us</h3>
+        <p>Have a question, an idea, or a story to share? We&rsquo;d love to hear from you.</p>
+        <a href="/contact" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Get in touch</a>
       </div>
     </div>
   </div>
 </section>'''
     write("about.html", layout(
         "About",
-        "About Sauna for All — a grassroots movement guiding public sauna-bathing as common good, and the founding stewards behind it.",
-        "about.html", body))
+        "Sauna for All is a grassroots movement guiding public sauna-bathing as common good, and the founding stewards behind it.",
+        "about", body))
 
 # ---------------------------------------------------------------------------
 # FAQS PAGE
@@ -1122,7 +1146,7 @@ def page_faqs():
     write("faqs.html", layout(
         "FAQs",
         "Frequently asked questions about the Public Sauna-Bathing Charter and the Sauna for All movement.",
-        "faqs.html", body))
+        "faqs", body))
 
 # ---------------------------------------------------------------------------
 # NEWS PAGE
@@ -1158,7 +1182,7 @@ def page_news():
     write("news.html", layout(
         "News",
         "News and press coverage of the Sauna for All movement and the Public Sauna-Bathing Charter.",
-        "news.html", body))
+        "news", body))
 
 print("Helpers loaded.")
 
