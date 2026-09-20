@@ -182,11 +182,20 @@ def load_signatories(csv_url, fallback):
     categories/commitment). Falls back to placeholder rows if no URL is
     configured, the fetch fails, or no response has public-listing consent
     yet."""
-    if not csv_url:
-        return fallback
-    text = _fetch_csv(csv_url)
+    text = _fetch_csv(csv_url) if csv_url else None
     if text is None:
-        return fallback
+        # No network to docs.google.com (sandboxed/offline build). Rather than
+        # emitting an empty directory -- which silently publishes a site with
+        # no signatories on it -- fall back to the committed snapshot in
+        # data/signatories_live.csv. See data/README.md; it's the same safe,
+        # public columns, just hand-refreshed rather than live.
+        snapshot = os.path.join(ROOT, "data", "signatories_live.csv")
+        if os.path.isfile(snapshot):
+            with open(snapshot, encoding="utf-8") as f:
+                text = f.read()
+            print("  ! live sheet unreachable; using data/signatories_live.csv snapshot")
+        else:
+            return fallback
 
     reader = csv.reader(io.StringIO(text))
     next(reader, None)  # header row
@@ -310,8 +319,17 @@ ICONS = {
 "voice": f'<svg viewBox="0 0 32 32"><path d="M6 12h6l8-6v20l-8-6H6z" {ICON_STROKE}/><path d="M24 12c2 1.3 2 6.7 0 8" {ICON_STROKE}/></svg>',
 }
 
+def icon_svg_or_img(name):
+    # The ten Charter principle icons are now finished, full-colour artwork
+    # (images/icons/<name>.png) rather than the hand-drawn monoline SVGs in
+    # ICONS -- prefer the image file when one exists for this name, and
+    # fall back to the inline SVG for anything that doesn't have one yet.
+    if os.path.exists(os.path.join(ROOT, "images", "icons", f"{name}.png")):
+        return f'<img src="/images/icons/{name}.png" alt="" loading="lazy">'
+    return ICONS[name]
+
 def icon(name, css_class="ic-tan"):
-    return f'<div class="icon-circle {css_class}">{ICONS[name]}</div>'
+    return f'<div class="icon-circle {css_class}">{icon_svg_or_img(name)}</div>'
 
 # ---------------------------------------------------------------------------
 # Nav / Footer
@@ -323,6 +341,10 @@ GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf425hWeCCmQFa1IF_nr
 OPEN_COLLECTIVE_URL = "https://opencollective.com/sauna_for_all"
 SUBSTACK_URL = "https://saunaforall.substack.com"
 SUBSTACK_FEED_URL = ""  # [ADD SUBSTACK LINK]/feed -- SPEC.md Section 4
+
+# Worker that proxies the live signatories Google Sheet as JSON, so the
+# directory and the homepage tally update without a rebuild.
+SIGNATORIES_FEED_ENDPOINT = "https://sauna-for-all-signatories-feed.tiny-block-645d.workers.dev"
 CONTACT_EMAIL = "hei@saunaforall.org"
 
 NAV_ITEMS = [
@@ -357,7 +379,7 @@ def nav(active):
     links = "\n".join(nav_link(item) for item in NAV_ITEMS)
     return f'''<header class="site-header">
   <div class="nav">
-    <a href="/" class="nav-logo" aria-label="Sauna for All, home">{logo_svg("#df804f", 34)}</a>
+    <a href="/" class="nav-logo" aria-label="Sauna for All, home"><img src="/images/logo/sauna-for-all-orange.png" alt="" style="height:34px; width:auto;"></a>
     <nav class="nav-links" id="navLinks">
       {links}
     </nav>
@@ -375,7 +397,7 @@ def footer():
   <div class="container">
     <div class="footer-grid">
       <div class="footer-col" style="max-width:340px;">
-        <a href="/" aria-label="Sauna for All, home">{logo_svg("#e7c196", 36)}</a>
+        <a href="/" aria-label="Sauna for All, home"><img src="/images/logo/sauna-for-all-orange.png" alt="" style="height:36px; width:auto;"></a>
         <p class="small" style="margin-top:16px; opacity:0.75;">Public Sauna. Common Good.</p>
       </div>
       <div class="footer-links">
@@ -407,7 +429,8 @@ def footer():
   </div>
 </footer>
 <script src="js/main.js"></script>
-<script src="js/news-feed.js"></script>'''
+<script src="js/news-feed.js"></script>
+<script src="js/signatories-feed.js"></script>'''
 
 HEAD_EXTRA = ""
 
@@ -501,10 +524,13 @@ def wave_mask(fill, edge="top", h=64, bumps=5.5, amplitude=18.7, phase=1.5):
     curve = " L".join(pts)
     if edge == "top":
         path_d = f"M0,0 L{curve} L{width},0 Z"
-        pos = "top:0;"
+        pos = "top:-1px;"
     else:
         path_d = f"M0,{h} L{curve} L{width},{h} Z"
-        pos = "bottom:0;"
+        # -1px so the mask bleeds past the photo's edge. The SVG scales with
+        # `height:auto`, so its rendered height rarely lands on a whole pixel
+        # and a hairline of photo was showing below the wave.
+        pos = "bottom:-1px;"
     return f'''<div class="wave-mask" style="position:absolute; left:0; right:0; {pos} line-height:0; pointer-events:none; z-index:1;">
 <svg viewBox="0 0 {width} {h}" style="width:100%; height:auto; display:block;"><path fill="{fill}" d="{path_d}"/></svg>
 </div>'''
@@ -573,18 +599,30 @@ def page_home():
 </section>
 {wave("#b3d3f0", backdrop="#0A382D")}'''
 
-    counter = f'''<section class="stat-strip" id="counter">
+    counter = f'''<section class="stat-strip" id="counter" data-feed-endpoint="{SIGNATORIES_FEED_ENDPOINT}">
   <div class="container stat-grid">
-    <div class="stat-item"><div class="num">{len(SIGNATORIES)}</div><div class="label">Signatories</div></div>
-    <div class="stat-item"><div class="num">{SIGNATORY_COUNTRY_COUNT}</div><div class="label">Countries</div></div>
+    <div class="stat-item"><div class="num" id="statSignatories">{len(SIGNATORIES)}</div><div class="label">Signatories</div></div>
+    <div class="stat-item"><div class="num">10</div><div class="label">Principles</div></div>
+    <div class="stat-item"><div class="num" id="statCountries">{SIGNATORY_COUNTRY_COUNT}</div><div class="label">Countries</div></div>
     <div class="stat-item"><div class="num">2026</div><div class="label">Introduced at World Sauna Forum</div></div>
+  </div>
+</section>'''
+
+    # Full-bleed photography band (Lucy's mockup) -- a straight, flat cut
+    # where it meets the light-blue counter above, and a wavy cream edge
+    # where it meets the charter summary below (so the mask colour matches
+    # that next section exactly).
+    photo_band = f'''<section style="padding:0;" id="home-photo">
+  <div style="position:relative; line-height:0;">
+    <img src="/images/photos/sauna-for-all-home-hero.jpg" alt="Elders bathing together in a traditional Finnish smoke sauna" class="photo-band-img" style="object-fit:cover;">
+    {wave_mask("#f7f4e9", edge="bottom")}
   </div>
 </section>'''
 
     def band_item(p):
         n = p["num"]
         return f'''<a href="/charter#principle-{int(n)}" class="principle-item">
-          <span class="icon-plain">{ICONS[p["icon"]]}</span>
+          <span class="icon-plain">{icon_svg_or_img(p["icon"])}</span>
           <span class="principle-item-text"><span class="num">{n}</span><span class="name principle-underline-{n}">{p["name"]}</span></span>
         </a>'''
 
@@ -614,7 +652,7 @@ def page_home():
   </div>
 </section>'''
 
-    why_now = f'''<section class="section bg-white" id="why-now">
+    why_now = f'''<section class="section bg-white" id="why-now" style="background:#fbec82;">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Why now</span>
@@ -631,17 +669,20 @@ def page_home():
     evidence = f'''<section class="section" id="evidence" style="background:var(--sand); color:var(--dark-green);">
   <div class="container">
     <div class="section-head">
-      <span class="eyebrow">The Evidence</span>
-      <h2>New to sauna or bathing for a lifetime, the benefits run deep</h2>
-      <p class="lede">Research is catching up with what bathers have long known: sauna supports body, mind, and community.</p>
+      <span class="eyebrow">The evidence</span>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <h2 style="margin:0;">The benefits run deep</h2>
+        <img src="/images/icons/thumbs-up.png" alt="" style="width:64px; height:64px; flex-shrink:0;" loading="lazy">
+      </div>
+      <p class="lede" style="margin-top:14px;">Sauna supports body, mind, and community. That is why how public sauna grows matters, and why the Charter asks for care in the way it is built and run.</p>
     </div>
-    <div class="card-grid-5">
-      <div class="info-card"><h3>Physical health</h3><p>A growing number of studies link regular sauna use to lower cardiovascular mortality, with the benefit growing the more often people go.<sup>1</sup></p></div>
-      <div class="info-card"><h3>Mental health and wellbeing</h3><p>In a large population study in northern Sweden, people who sauna bathe reported better mental health, more energy, and less pain, and mental health scores rose with more frequent bathing.<sup>2</sup></p></div>
-      <div class="info-card"><h3>Why people bathe</h3><p>Regular bathers describe sauna as a place for mental recovery, social togetherness, cleansing, and physical health, all working together.<sup>3</sup></p></div>
-      <div class="info-card"><h3>Belonging</h3><p>Frequent sauna use, especially weekly, is linked to greater health and wellbeing, and part of that benefit comes from a stronger sense of belonging.<sup>4</sup></p></div>
-      <div class="info-card"><h3>Local value</h3><p>Cities already invest in pools and rinks for health and community. Well-run public saunas can offer the same value. <em>Case studies coming soon.</em></p></div>
-    </div>
+    <ul class="is-list check-mint list-spaced" style="margin-top:6px; max-width:70ch;">
+      <li><span><strong>Physical health.</strong> Regular sauna use is linked to lower cardiovascular mortality, and the benefit grows the more often people go.<sup>1</sup></span></li>
+      <li><span><strong>Mental health and wellbeing.</strong> In a large study in northern Sweden, sauna bathers reported better mental health, more energy, and less pain, with mental health scores rising the more often they bathed.<sup>2</sup></span></li>
+      <li><span><strong>Rest and connection.</strong> Regular bathers describe sauna as a place to recover mentally and to be with others, alongside the physical benefits.<sup>3</sup></span></li>
+      <li><span><strong>Belonging.</strong> Frequent sauna use is linked to greater health and wellbeing, and part of that benefit comes from a stronger sense of belonging.<sup>4</sup></span></li>
+      <li><span><strong>Local value.</strong> Cities already invest in pools and rinks for health and community. Well-run public saunas offer the same kind of value, close to home and open to all. <em>Case studies coming soon.</em></span></li>
+    </ul>
     <p class="small" style="margin-top:16px; opacity:0.85;">Sources: (1) Laukkanen et al., <em>BMC Medicine</em>, 2018. (2) Engstr&ouml;m, H&auml;gglund et al., <em>International Journal of Circumpolar Health</em>, 2024. (3) Engstr&ouml;m, Wiell, H&auml;gglund &amp; Lennkvist, <em>International Journal of Circumpolar Health</em>, 2026. (4) Newson, McGrath et al., <em>Social Science &amp; Medicine</em>, 2026.</p>
   </div>
 </section>'''
@@ -651,7 +692,7 @@ def page_home():
     <div>
       <span class="eyebrow" style="color:var(--gold);">Who we are</span>
       <h2 style="margin:14px 0 18px;">Grassroots by design, guided by experience</h2>
-      <p class="lede muted">Sauna for All has grown from the ground up. An international group of founding stewards guides the work, bringing years of experience running public saunas, researching sauna culture, and building community. The movement is shaped by many more: advisors, knowledge holders, operators, and bathers who contribute and help the Charter grow.</p>
+      <p class="lede muted">Sauna for All has grown from the ground up, guided by stewards who run public saunas, study sauna culture, and build community, alongside the advisors, operators, and bathers who shape it with them.</p>
       <div style="margin-top:18px; display:flex; flex-direction:column; gap:8px;">
         <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">Meet the founding stewards &rarr;</a>
         <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700;">Support the movement &rarr;</a>
@@ -669,7 +710,7 @@ def page_home():
   </div>
 </section>'''
 
-    body = hero + counter + charter_summary + why_now + evidence + who_we_are + newsletter
+    body = hero + counter + photo_band + charter_summary + why_now + evidence + who_we_are + newsletter
     write("index.html", layout(
         "Home",
         "Sauna for All is a grassroots global movement guiding public sauna-bathing as common good, through the Public Sauna-Bathing Charter.",
@@ -679,6 +720,10 @@ def page_home():
 # OVERVIEW PAGE (the Charter, in full — formerly charter.html)
 # ---------------------------------------------------------------------------
 CHARTER_PDF_URL = "/files/public-sauna-bathing-charter.pdf"
+# The "Download PDF" button now points at the Drive folder (which holds the
+# current PDF plus translations as they land) rather than the single file
+# bundled in this repo.
+CHARTER_DRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1xpRWK0kG0gFhcAJCtuxQe3FpbKu50loO?usp=drive_link"
 
 def page_charter():
     charter_header = f'''<section class="section bg-cream" style="padding-bottom:0;" id="charter-header">
@@ -688,10 +733,10 @@ def page_charter():
     <p class="lede muted" style="max-width:64ch;">The Charter sets out shared principles for developing and caring for public sauna responsibly. It gives communities, operators, governments, funders, and researchers a common reference point. Signatories commit to showing how these principles guide their decisions and daily practice.</p>
     <div class="hero-actions" style="margin-top:26px;">
       <a href="/signatories#sign" class="btn btn-primary">Sign the Charter</a>
-      <a href="{CHARTER_PDF_URL}" class="btn btn-outline-dark">Download PDF</a>
+      <a href="{CHARTER_DRIVE_FOLDER_URL}" class="btn btn-outline-dark" target="_blank" rel="noopener">Download PDF</a>
     </div>
-    <p class="small muted" style="margin-top:14px;">Version 1.0, August 19, 2026</p>
-    <div style="margin-top:10px; display:flex; gap:22px; flex-wrap:wrap;">
+    <p class="small muted" style="margin-top:14px;">Version 1.0, August 19, 2026. Available in other languages soon.</p>
+    <div style="margin-top:22px; display:flex; gap:22px; flex-wrap:wrap;">
       <a href="/faqs" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Read the FAQs &rarr;</a>
       <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Support our work &rarr;</a>
     </div>
@@ -735,42 +780,31 @@ def page_charter():
   </div>
 </section>'''
 
-    WHO_CAN_SIGN_ROLES = [
-        ("Operators and Keepers", "People who run, host, or tend public saunas that offer published public sessions anyone can attend."),
-        ("Community Sauna Organisations and Networks", "Groups that connect, support, and speak for public and community saunas in their region."),
-        ("Governments and Public Bodies", "Municipalities, Indigenous Nations, and public health and tourism organisations shaping planning, policy, and investment."),
-        ("Designers, Builders and Suppliers", "Architects, builders, manufacturers, and suppliers helping create public saunas that are safe, accessible, and built to last."),
-        ("Researchers and Educators", "People building the evidence, knowledge, and training that help public sauna grow well."),
-        ("Funders and Investors", "Those who support public sauna as a public good and want their investment to reflect that."),
-        ("Bathers and Advocates", "Individuals who believe public sauna should be welcoming, safe, and held for the common good."),
+    WHO_CAN_SIGN_GROUPS = [
+        ("Those who build and run public sauna", "Operators and keepers, community sauna organisations and networks, designers, builders, and suppliers."),
+        ("Those who shape the conditions for it", "Governments and public bodies, funders and investors, researchers and educators."),
+        ("Those who use and champion it", "Bathers and advocates."),
     ]
-    role_cards_html = "".join(
-        f'<div class="info-card"><h3>{title}</h3><p>{body}</p></div>' for title, body in WHO_CAN_SIGN_ROLES)
+    who_can_sign_html = "".join(
+        f'<p style="margin-top:14px;"><strong>{title}.</strong> {body}</p>' for title, body in WHO_CAN_SIGN_GROUPS)
 
     who_can_sign = f'''<section class="section" id="who-can-sign" style="background:var(--light-blue); color:var(--green-dark);">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Who can sign</span>
-      <h2>Built by, and for, everyone shaping public sauna</h2>
+      <h2>Built by, and for, everyone shaping sauna in their communities</h2>
       <p class="lede muted">Anyone working to strengthen public sauna as a common good can sign. You don&rsquo;t need to run a sauna. You simply state what you will do, in your own role, to support the Charter&rsquo;s principles.</p>
     </div>
-    <div class="card-grid-4">{role_cards_html}</div>
-    <div class="callout" style="margin-top:28px;">
-      <p style="margin:0 0 10px;"><strong>Two things to know before signing.</strong> A reference from an existing signatory is required. Operators also need to meet the Charter&rsquo;s definition of a public sauna-bath: public sessions people can attend on their own, without a membership, an overnight stay, or buying another product or service.</p>
-      <div style="display:flex; gap:22px; flex-wrap:wrap; font-weight:700;">
-        <a href="/signatories#list" style="text-decoration:underline;">Find a signatory &rarr;</a>
-        <a href="/faqs" style="text-decoration:underline;">Read the full answer in the FAQs &rarr;</a>
-      </div>
-    </div>
-    <p class="small" style="margin-top:20px;">The founding stewards and advisors are the Charter&rsquo;s first signatories. Meet them on the <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">About page &rarr;</a></p>
+    <div style="max-width:60ch;">{who_can_sign_html}</div>
+    <p class="small" style="margin-top:24px; font-weight:700;">Want to join the movement? <a href="#how-signing-works" style="text-decoration:underline;">See how signing works &rarr;</a></p>
   </div>
 </section>'''
 
     HOW_SIGNING_STEPS = [
         ("Read the Charter", "Get to know the ten principles and talk them through with your team, board, or council."),
-        ("Find a reference", "Ask an existing signatory, either an individual or an organisation, for a letter or brief statement of reference."),
+        ("Find a reference", "Ask an existing signatory, a person or an organisation, for a few words of support. We can help if you don&rsquo;t know anyone yet."),
         ("Complete the questionnaire", "The form has three parts: Commitment, Contribution, and Consent and Affirmation."),
-        ("Review and welcome", "Applications are reviewed by the founding stewards in intake rounds, two to four times a year. Once confirmed, you join the list of signatories and the wider network, with check-ins on your commitments over time."),
+        ("Welcome", "The founding stewards review applications together, two to four times a year. Once confirmed, you join the signatories and the wider network, and we check in on your commitments as your work grows."),
     ]
     step_cards_html = "".join(
         f'<div class="info-card"><h3>{i+1}. {title}</h3><p>{body}</p></div>'
@@ -780,15 +814,15 @@ def page_charter():
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">How signing works</span>
-      <h2>Signing is an application, and it asks for real commitments</h2>
-      <p class="lede muted">Signing is free and takes about 15 to 30 minutes. You choose the principles most relevant to your work and say, in your own words, how you will put them into practice.</p>
+      <h2>Four steps to joining the movement</h2>
+      <p class="lede muted">Signing is free and takes about 15 to 30 minutes. You choose the principles closest to your work and say, in your own words, how you will put them into practice.</p>
     </div>
     <div class="card-grid-4">{step_cards_html}</div>
     <div class="hero-actions" style="margin-top:26px;">
       <a href="/signatories#sign" class="btn btn-primary">Sign the Charter</a>
       <a href="/signatories#list" class="btn btn-outline-dark">Find a signatory</a>
     </div>
-    <p class="small muted" style="margin-top:14px;">The initial intake round is currently open. Join the movement!</p>
+    <p class="small muted" style="margin-top:14px;">The first intake round is open now. We&rsquo;d love to have you with us.</p>
   </div>
 </section>'''
 
@@ -796,17 +830,17 @@ def page_charter():
   <div class="container two-col">
     <div>
       <span class="eyebrow" style="color:var(--purple);">What the Charter is</span>
-      <ul class="is-list" style="margin-top:18px;">
-        <li>A shared set of principles for the responsible development and stewardship of public sauna.</li>
-        <li>A common reference point for communities, operators, governments, funders, researchers, and industry.</li>
-        <li>A guide for planning, governance, operations, investment, and policy.</li>
-        <li>A commitment to public sauna that is safe, accessible, culturally respectful, and trustworthy.</li>
-        <li>A foundation for shared guidance, resources, and learning across the movement.</li>
+      <ul class="is-list list-spaced" style="margin-top:18px;">
+        <li><span><strong>A shared set of principles.</strong> A common basis for developing and caring for public sauna responsibly.</span></li>
+        <li><span><strong>A common reference point.</strong> For communities, operators, governments, funders, researchers, and industry.</span></li>
+        <li><span><strong>A guide.</strong> For planning, governance, operations, investment, and policy.</span></li>
+        <li><span><strong>A commitment.</strong> To public sauna that is safe, accessible, culturally respectful, and trustworthy.</span></li>
+        <li><span><strong>A foundation.</strong> For shared guidance, resources, and learning across the movement.</span></li>
       </ul>
     </div>
     <div>
       <span class="eyebrow" style="color:var(--brown);">What the Charter isn&rsquo;t</span>
-      <ul class="isnt-list" style="margin-top:18px;">
+      <ul class="isnt-list list-spaced" style="margin-top:18px;">
         <li><span><strong>A certification.</strong> It does not certify, audit, or rank public saunas.</span></li>
         <li><span><strong>A rulebook or technical standard.</strong> It sets out shared principles, and leaves technical detail to local codes and expertise.</span></li>
         <li><span><strong>A replacement for regulation.</strong> It works alongside existing laws and safety requirements.</span></li>
@@ -836,61 +870,50 @@ SIGNATORIES = load_signatories(SIGNATORIES_SHEET_CSV_URL, _PLACEHOLDER_SIGNATORI
 SIGNATORY_COUNTRY_COUNT = len({_country_of(s) for s in SIGNATORIES if _country_of(s)})
 
 def page_signatories():
-    signatories_header = f'''<section class="section bg-cream" style="padding-bottom:0;" id="signatories-header">
-  <div class="container">
-    <span class="eyebrow" style="color:var(--gold);">Signatories</span>
-    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px; max-width:24ch;">Sign the Charter, and meet those who already have</h1>
-    <p class="lede muted" style="max-width:64ch;">Sauna for All is built by the people and organisations shaping public sauna today, from operators and community networks to governments, researchers, builders, and bathers. Explore who has committed, find a signatory to support your application, or apply to join them.</p>
-    <div class="hero-actions" style="margin-top:22px;">
-      <a href="#sign" class="btn btn-primary">Sign the Charter</a>
-      <a href="/charter" class="btn btn-outline-dark">Read the Charter</a>
+    # Photo sits beside the header text, same treatment as the About page's
+    # "story" section (two-col, rounded corners). No padding-bottom:0 here --
+    # the next section has a different background, so the header keeps its
+    # normal bottom padding.
+    signatories_header = f'''<section class="section bg-cream" id="signatories-header">
+  <div class="container two-col">
+    <div>
+      <span class="eyebrow" style="color:var(--gold);">Signatories</span>
+      <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px; max-width:24ch;">You&rsquo;re in good company</h1>
+      <p class="lede muted" style="max-width:52ch;">Signatories come from many places and many roles, and each one has said what they will do to support public sauna as a common good. See who has joined, find someone to support your application, or add your name.</p>
+      <div class="hero-actions" style="margin-top:22px;">
+        <a href="#sign" class="btn btn-primary">Sign the Charter</a>
+        <a href="/charter" class="btn btn-outline-dark">Read the Charter</a>
+      </div>
     </div>
+    <img src="/images/photos/sauna-for-all-signatories-hero.jpg" alt="Signatories celebrating together on a lake dock after a sauna" style="border-radius:var(--radius-lg); width:100%; height:100%; object-fit:cover;">
   </div>
 </section>'''
 
     BEFORE_YOU_BEGIN = [
-        ("Build alignment.", "Talk it through with your team, board, or council first."),
-        ("Get a reference.", 'You&rsquo;ll need a letter or statement from an existing signatory. <a href="#list" style="text-decoration:underline; font-weight:700;">Find a signatory &rarr;</a>'),
-        ("Check eligibility.", "Operators need to offer published public sessions people can attend on their own."),
-        ("Set aside 15 to 30 minutes.", "You can&rsquo;t save and return in Google Forms, so it helps to draft your commitments first."),
+        'Talk it through with your team, board, or council.',
+        'Ask an existing signatory for a few words of support. <a href="#list" style="text-decoration:underline; font-weight:700;">Find a signatory &rarr;</a>',
+        'Draft your commitments first. The form doesn&rsquo;t save as you go.',
     ]
-    before_you_begin_html = "".join(
-        f'<li><strong>{lead}</strong> {rest}</li>' for lead, rest in BEFORE_YOU_BEGIN)
+    before_you_begin_html = "".join(f'<li><span>{item}</span></li>' for item in BEFORE_YOU_BEGIN)
 
-    QUESTIONNAIRE_PARTS = [
-        ("Part A: Commitment.", "Who you are, why you&rsquo;re signing, and the principles and commitments you choose."),
-        ("Part B: Contribution.", "Your stewardship, your part in the sector, research, and looking ahead."),
-        ("Part C: Consent and Affirmation.", ""),
-    ]
-    questionnaire_parts_html = "".join(
-        f'<li><strong>{lead}</strong>{" " + rest if rest else ""}</li>' for lead, rest in QUESTIONNAIRE_PARTS)
-
-    sign = f'''<section class="section bg-white" id="sign">
+    sign = f'''<section class="section" id="sign" style="background:#fbec82;">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Sign the Charter</span>
-      <h2>Signing is an application, and it asks for real commitments</h2>
-      <p class="lede muted">By signing, you commit to the Charter&rsquo;s principles and to showing how they guide your decisions, operations, and stewardship.</p>
+      <h2>Add your name</h2>
+      <p class="lede muted">Signing means choosing the principles closest to your work and saying, in your own words, how you will put them into practice. It takes about 15 to 30 minutes.</p>
     </div>
     <div class="two-col">
       <div>
         <h3>Before you begin</h3>
         <ul class="is-list" style="margin-top:14px;">{before_you_begin_html}</ul>
-        <h3 style="margin-top:30px;">The questionnaire has three parts</h3>
-        <ul class="is-list" style="margin-top:14px;">{questionnaire_parts_html}</ul>
-        <a href="{GOOGLE_FORM_URL}" class="btn btn-solid-orange" target="_blank" rel="noopener" style="margin-top:10px; display:inline-block;">Open the questionnaire</a>
+        <a href="{GOOGLE_FORM_URL}" class="btn btn-solid-orange" target="_blank" rel="noopener" style="margin-top:20px; display:inline-block;">Open the questionnaire</a>
         <p class="small muted" style="margin-top:10px;">Opens in Google Forms.</p>
       </div>
-      <div class="stack-20">
-        <div class="info-card">
-          <h3>What happens next</h3>
-          <p>The founding stewards review applications together in intake rounds, two to four times a year. Once confirmed, you&rsquo;re listed among the signatories and welcomed into the network. Your commitments are revisited in future check-ins.</p>
-        </div>
-        <div class="info-card">
-          <h3>Who can sign</h3>
-          <p class="small">{" &middot; ".join(SIGNATORY_FILTERS)}</p>
-          <a href="/charter#who-can-sign" style="display:inline-block; margin-top:10px; font-weight:700; text-decoration:underline; font-size:0.9rem;">Read who can sign in full &rarr;</a>
-        </div>
+      <div>
+        <h3>What happens next</h3>
+        <p class="muted" style="margin-top:10px;">The founding stewards read every application together, two to four times a year. Once confirmed, you join the signatories and the wider network, and we check in on your commitments as your work grows.</p>
+        <p class="small" style="margin-top:22px; font-weight:700;">Questions about signing? <a href="/faqs" style="text-decoration:underline;">Read the FAQs &rarr;</a></p>
       </div>
     </div>
   </div>
@@ -954,7 +977,7 @@ def page_signatories():
       </div>
       <input type="search" id="signatorySearch" class="filter-search" placeholder="Search by name or country&hellip;" aria-label="Search signatories">
     </div>
-    <div class="signatories-grid" id="signatoriesGrid">{signatories_html}</div>
+    <div class="signatories-grid" id="signatoriesGrid" data-feed-endpoint="{SIGNATORIES_FEED_ENDPOINT}">{signatories_html}</div>
     <p class="filter-empty" id="signatoryEmpty">{empty_message}</p>'''
     else:
         list_html = '<p class="lede muted">Our first signatories will appear here soon.</p>'
@@ -963,9 +986,12 @@ def page_signatories():
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Signatories</span>
-      <h2>Who has signed the Charter</h2>
-      <p class="lede muted">Meet the people and organisations committed to public sauna as a common good. Filter by role, or search by name or country.</p>
-      <p class="small muted" style="margin-top:10px;">New signatories are confirmed in intake rounds, two to four times a year. Sign up for news to hear when the next round opens.</p>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <h2 style="margin:0;">The people making it happen</h2>
+        <img src="/images/icons/thumbs-up.png" alt="" style="width:56px; height:56px; flex-shrink:0;" loading="lazy">
+      </div>
+      <p class="lede muted" style="margin-top:14px;">These are the operators, communities, and advocates who have committed to public sauna as a common good. Find someone near you, or someone doing work like yours.</p>
+      <p class="small muted" style="margin-top:10px;">We&rsquo;re open for new signatories right now. <a href="#sign" style="text-decoration:underline; font-weight:700;">Sign the Charter &rarr;</a></p>
     </div>
     {list_html}
   </div>
@@ -979,7 +1005,7 @@ def page_signatories():
         ("Partner with us", "through funding, grants, or sponsorship."),
     ]
     ways_to_help_html = "".join(
-        f'<li><strong>{lead}</strong> {rest}</li>' for lead, rest in WAYS_TO_HELP)
+        f'<li><span><strong>{lead}</strong> {rest}</span></li>' for lead, rest in WAYS_TO_HELP)
 
     support = f'''<section class="section bg-green" id="support">
   <div class="container">
@@ -1037,35 +1063,44 @@ def page_signatories():
 # ---------------------------------------------------------------------------
 def page_about():
     STEWARDS = [
-        ("Becky Pelkonen", "Kamu Sauna", "Canada"),
-        ("Polly Wilson", "Community Sauna Baths", "United Kingdom"),
-        ("Charlie Duckworth", "Community Sauna Baths", "United Kingdom"),
-        ("Freddie Mehigan", "Community Sauna Network", "United Kingdom"),
-        ("Ian Whelan", "Fád Saoil Saunas", "Ireland"),
-        ("Steve Crosbie", "Fád Saoil Saunas", "Ireland"),
-        ("Jason Wong", "Kotisauna", "Canada"),
-        ("Azar Eskandarpour", "Humans Who Bathe", "Mexico"),
-        ("Juho Pelkonen", "Kamu Sauna", "Canada"),
-        ("Niamh Murphy", "Kamu Sauna", "Canada"),
+        ("Becky Pelkonen", "Kamu Sauna", "Canada", "becky-pelkonen.jpg"),
+        ("Polly Wilson", "Community Sauna Baths", "United Kingdom", "polly-wilson.jpg"),
+        ("Charlie Duckworth", "Community Sauna Baths", "United Kingdom", "charlie-duckworth.jpg"),
+        ("Freddie Mehigan", "Community Sauna Network", "United Kingdom", "freddie-mehigan.jpg"),
+        ("Ian Whelan", "Fád Saoil Saunas", "Ireland", "ian-whelan.jpg"),
+        ("Steve Crosbie", "Fád Saoil Saunas", "Ireland", "steve-crosbie.jpg"),
+        ("Jason Wong", "Kotisauna", "Canada", "jason-wong.jpg"),
+        ("Azar Eskandarpour", "Humans Who Bathe", "Mexico", "azar-eskandarpour.jpg"),
+        ("Juho Pelkonen", "Kamu Sauna", "Canada", "juho-pelkonen.jpg"),
+        ("Niamh Murphy", "Kamu Sauna", "Canada", "niamh-murphy.jpg"),
     ]
     ADVISORS = [
-        ("Mikkel Aaland", "author and sauna historian, United States"),
-        ("Dalva Lamminmäki", "folklorist and sauna researcher, Finland"),
+        ("Mikkel Aaland", "Author, Historian, and Founder of SaunaAid, United States", "mikkel-aaland.jpg"),
+        ("Dalva Lamminmäki", "Folklorist and Doctoral Researcher, Finland", "dalva-lamminmaki.jpg"),
+        ("Carita Harju", "Sauna from Finland Founder and Executive Director, Finland", "carita-harju.jpg"),
     ]
 
-    def person(name, role):
-        initials = "".join([p[0] for p in name.split()[:2]])
-        return f'''<div class="person"><div class="avatar">{initials}</div><div class="name">{name}</div><div class="role">{role}</div></div>'''
+    def person(name, role, photo=None):
+        if photo:
+            avatar = f'<img src="/images/headshots/{photo}" alt="{name}" loading="lazy">'
+        else:
+            initials = "".join([p[0] for p in name.split()[:2]])
+            avatar = initials
+        return f'''<div class="person"><div class="avatar">{avatar}</div><div class="name">{name}</div><div class="role">{role}</div></div>'''
 
-    stewards_html = "".join(person(name, f"{org}, {country}") for name, org, country in STEWARDS)
-    advisors_html = "".join(person(name, role) for name, role in ADVISORS)
-    advisors_html += '''<div class="person"><div class="avatar" style="font-size:0.62rem; font-weight:700; text-align:center; padding:6px; line-height:1.15;">Sauna From Finland</div><div class="name">Sauna from Finland</div></div>'''
+    stewards_html = "".join(person(name, f"{org}, {country}", photo) for name, org, country, photo in STEWARDS)
+    advisors_html = "".join(person(name, role, photo) for name, role, photo in ADVISORS)
 
     body = f'''<section class="section bg-cream" style="padding-bottom:0;" id="story">
-  <div class="container">
-    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 18px;">Public sauna as common good</h1>
-    <p class="lede muted" style="max-width:64ch;">Around the world, people are rediscovering public sauna, both for their own wellbeing and for the life it brings to communities. Sauna for All is a grassroots movement guiding this resurgence through shared values, evidence, and collaboration. Our aim is for public sauna to grow as a trusted part of civic and cultural life, rooted in the common good.</p>
-    <a href="#stewards" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the founding stewards &rarr;</a>
+  <div class="container two-col">
+    <div>
+      <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 18px;">Public sauna as common good</h1>
+      <p class="lede muted" style="max-width:52ch;">Around the world, people are rediscovering public sauna, both for their own wellbeing and for the life it brings to communities.</p>
+      <p class="lede muted" style="max-width:52ch; margin-top:16px;">Sauna for All is a grassroots movement guiding this resurgence through shared values, evidence, and collaboration.</p>
+      <p class="lede muted" style="max-width:52ch; margin-top:16px;">Our aim is for public sauna to grow as a trusted part of civic and cultural life, rooted in the common good.</p>
+      <a href="#stewards" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the founding stewards &rarr;</a>
+    </div>
+    <img src="/images/photos/sauna-for-all-2026-05.jpg" alt="Steve Crosbie and Ian Whelan of F&aacute;d Saoil Saunas, founding stewards of the Public Sauna-Bathing Charter" style="border-radius:var(--radius-lg); width:100%; height:100%; object-fit:cover;">
   </div>
 </section>
 
@@ -1102,7 +1137,7 @@ def page_about():
     <div>
       <span class="eyebrow">With gratitude</span>
       <h2>Many have carried the water</h2>
-      <p class="lede muted">People across the sauna world have shared their knowledge, guidance, and encouragement as the Charter took shape. We thank Sauna from Finland for early support and advice, and for welcoming this work at the World Sauna Forum. We thank the organisers of the International Sauna Congress for making room for this conversation. And we thank the grassroots organisers in Finland and around the world who have stepped forward as early signatories.</p>
+      <p class="lede muted">People across the sauna world have shared their knowledge and encouragement as the Charter took shape. We thank Sauna from Finland for welcoming this work at the World Sauna Forum, the International Sauna Congress for making room for it, and the grassroots organisers who have stepped forward as early signatories.</p>
       <a href="/signatories" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the signatories and wider network &rarr;</a>
     </div>
     <div>
@@ -1117,26 +1152,28 @@ def page_about():
       <span class="eyebrow">Get involved</span>
       <h2>Want to help shape what comes next?</h2>
     </div>
-    <div class="card-grid-4">
-      <div class="info-card">
-        <h3>1. Stay close on the bench</h3>
-        <p>Follow the Charter as it grows, learn from operators and researchers, and get invitations to online meet-ups. You&rsquo;ll also hear first when we open new rounds for signatories.</p>
-        <a href="{SUBSTACK_URL or '#'}" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Sign up</a>
-      </div>
-      <div class="info-card">
-        <h3>2. Sign the Charter</h3>
-        <p>Ready to commit? Signing means sharing how the Charter&rsquo;s principles show up in your work. The form takes about 15 to 30 minutes, and we&rsquo;re happy to help along the way.</p>
+    <div class="card-grid-2">
+      <div class="info-card cta-card">
+        <h3>Sign the Charter</h3>
+        <p>Ready to commit? Signing means sharing how the Charter&rsquo;s principles show up in your work. It takes about 15 to 30 minutes.</p>
         <a href="/signatories#sign" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Sign the Charter</a>
       </div>
-      <div class="info-card">
-        <h3>3. Support our work</h3>
-        <p>Sauna for All is run by volunteers at this time. Your contribution helps with Charter administration, our website, future gatherings, and initial research and case study development projects.</p>
+      <div class="info-card cta-card">
+        <h3>Support our work</h3>
+        <p>Sauna for All is run by volunteers. Your contribution keeps the Charter, this site, and future gatherings going.</p>
         <a href="{OPEN_COLLECTIVE_URL}" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Make a donation</a>
       </div>
-      <div class="info-card">
-        <h3>4. Contact us</h3>
-        <p>Have a question, an idea, or a story to share? We&rsquo;d love to hear from you.</p>
-        <a href="/contact" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Get in touch</a>
+    </div>
+    <div class="card-grid-2" style="margin-top:24px;">
+      <div>
+        <h3>Stay close on the bench</h3>
+        <p class="small muted" style="margin-top:8px;">News, stories, and invitations to online meet-ups.</p>
+        <a href="{SUBSTACK_URL or '#'}" style="display:inline-block; margin-top:10px; text-decoration:underline; font-weight:700;">Sign up &rarr;</a>
+      </div>
+      <div>
+        <h3>Contact us</h3>
+        <p class="small muted" style="margin-top:8px;">A question, an idea, or a story to share? We&rsquo;d love to hear from you.</p>
+        <a href="/contact" style="display:inline-block; margin-top:10px; text-decoration:underline; font-weight:700;">Get in touch &rarr;</a>
       </div>
     </div>
   </div>
@@ -1438,18 +1475,7 @@ def page_news():
   </div>
 </section>'''
 
-    media = f'''<section class="section bg-white" id="media">
-  <div class="container">
-    <div class="section-head">
-      <h2>For media</h2>
-      <p class="lede muted">Writing about public sauna or the Charter? We&rsquo;re happy to help with background, key facts, logos, photos, and interviews with our founding stewards.</p>
-      <a href="/contact?reason=media" class="btn btn-primary" style="margin-top:18px; display:inline-block;">Contact us</a>
-      <p class="small muted" style="margin-top:12px;">Media enquiries: <a href="mailto:{CONTACT_EMAIL}" style="text-decoration:underline; font-weight:700;">{CONTACT_EMAIL}</a></p>
-    </div>
-  </div>
-</section>'''
-
-    body = news_header + updates + news_newsletter + featured + media
+    body = news_header + updates + news_newsletter + featured
     write("news.html", layout(
         "News",
         "News from Sauna for All, and coverage of public sauna and the Charter from around the world.",
@@ -1533,7 +1559,14 @@ def page_contact():
     <p class="lede muted" style="max-width:64ch;">Have a question, an idea, or a story to share? We&rsquo;d love to hear from you.</p>
   </div>
 </section>
-<section class="section bg-cream">
+<section class="section bg-cream" style="padding-top:0;" id="media">
+  <div class="container" style="max-width:640px;">
+    <h2 style="font-size:1.3rem;">For media</h2>
+    <p class="muted" style="margin-top:8px;">Writing about public sauna or the Charter? We&rsquo;re happy to help with background, key facts, logos, photos, and interviews with our founding stewards.</p>
+    <p class="small muted" style="margin-top:10px;">Media enquiries: <a href="mailto:{CONTACT_EMAIL}" style="text-decoration:underline; font-weight:700;">{CONTACT_EMAIL}</a></p>
+  </div>
+</section>
+<section class="section bg-cream" style="padding-top:0;">
   <div class="container" style="max-width:640px;">
     <form id="contactForm" novalidate>
       <div class="field-stack">

@@ -87,6 +87,16 @@
 }
 .is-list li, .isnt-list li { display: flex; align-items: flex-start; list-style: none; }
 
+/* mint checkmark variant (e.g. the homepage "Evidence" list) -- same
+   circle/spacing as .is-list, just a different checkmark colour */
+.is-list.check-mint li::before{ background:#afcc90; }
+
+/* extra breathing room between items, for lists whose entries are often
+   a single line each (e.g. the Charter's "is / isn't" columns) so they
+   don't read as one bunched-up block */
+.list-spaced li{ margin-top:14px; }
+.list-spaced li:first-child{ margin-top:0; }
+
 *, *::before, *::after{ box-sizing: border-box; }
 html{ scroll-behavior: smooth; }
 body{
@@ -117,7 +127,7 @@ h1, .h1{ font-size: clamp(2.4rem, 5vw, 4.2rem); font-weight: 800; line-height: 1
 h2, .h2{ font-size: clamp(1.8rem, 3.2vw, 2.6rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.01em; }
 h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height: 1.25; }
 .eyebrow{
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -171,7 +181,7 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
   gap: 24px;
 }
 .nav-logo{ display:flex; align-items:center; height: 40px; flex-shrink:0; }
-.nav-logo svg{ height: 100%; width: auto; }
+.nav-logo svg, .nav-logo img{ height: 100%; width: auto; }
 .nav-links{
   display:flex;
   align-items:center;
@@ -383,7 +393,7 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 }
 .principle-detail:first-child{ border-top:none; padding-top:10px; }
 .principle-detail-icon{ position:relative; display:flex; justify-content:center; padding-top:2px; }
-.principle-detail-icon .icon-circle{ width:60px; height:60px; }
+.principle-detail-icon .icon-circle{ width:76px; height:76px; }
 .principle-detail-icon .num{
   position:absolute; bottom:-6px; right:0;
   background: var(--green-dark); color: var(--white);
@@ -443,8 +453,9 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 }
 .principle-item:hover{ transform: translateY(-2px); }
 .principle-item:hover .name{ text-decoration: underline; }
-.icon-plain{ width:44px; height:44px; flex-shrink:0; }
+.icon-plain{ width:52px; height:52px; flex-shrink:0; }
 .icon-plain svg{ width:100%; height:100%; }
+.icon-plain img{ width:100%; height:100%; object-fit:contain; }
 .principle-item-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
 .principle-item-text .num{ font-size:0.72rem; font-weight:700; opacity:0.5; letter-spacing:0.03em; }
 .principle-item-text .name{ font-weight:700; font-size:0.96rem; line-height:1.28; color: var(--ink); }
@@ -464,6 +475,7 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
   flex-shrink:0;
 }
 .icon-circle svg{ width:60%; height:60%; }
+.icon-circle img{ width:78%; height:78%; object-fit:contain; }
 .ic-tan{ background: var(--tan); }
 .ic-orange{ background: var(--orange); }
 .ic-gold{ background: var(--gold); }
@@ -489,6 +501,9 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 @media (max-width: 900px){ .card-grid-4{ grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px){ .card-grid-4{ grid-template-columns: 1fr; } }
 
+.card-grid-2{ display:grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+@media (max-width: 620px){ .card-grid-2{ grid-template-columns: 1fr; } }
+
 .info-card{
   background: var(--white);
   border-radius: var(--radius-md);
@@ -498,6 +513,14 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 .info-card.on-green{ background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); }
 .info-card h3{ margin-bottom:10px; }
 .info-card p{ font-size:0.95rem; opacity:0.85; }
+
+/* Cards that pair each block of text with a button below it (e.g. the
+   About page's "Get involved" row): the grid already stretches every card
+   in a row to match the tallest one, so making the card a column flexbox
+   and letting the paragraph grow into the leftover space pushes every
+   button down to the same line, however much the text above it wraps. */
+.cta-card{ display:flex; flex-direction:column; }
+.cta-card p{ flex:1 0 auto; }
 
 .chip-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap: 14px; }
 .chip{
@@ -605,6 +628,12 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
   margin-bottom: 10px;
   display:flex; align-items:center; justify-content:center;
   color: var(--green-dark); font-weight:800; font-size:1.4rem;
+  overflow: hidden;
+}
+.person .avatar img{
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .person .name{ font-weight:700; font-size:0.92rem; }
 .person .role{ font-size:0.8rem; opacity:0.7; }

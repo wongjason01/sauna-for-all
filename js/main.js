@@ -43,14 +43,21 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Signatories directory: category filter (multi-select toggle chips) + text search
-  var filterWrap = document.getElementById('signatoryFilters');
-  var searchInput = document.getElementById('signatorySearch');
-  var grid = document.getElementById('signatoriesGrid');
-  if (filterWrap && grid) {
+  // Signatories directory: category filter (multi-select toggle chips) + text
+  // search. Exposed as window.initSignatoryFilters so js/signatories-feed.js
+  // can re-run it after replacing #signatoriesGrid's contents with live data
+  // from the feed Worker -- the chip/search listeners themselves only need
+  // wiring up once, but the card list they filter has to be re-read fresh
+  // each time it's called, since a re-run after a live-data refresh has an
+  // entirely new set of .signatory-card elements to work with.
+  function initSignatoryFilters() {
+    var filterWrap = document.getElementById('signatoryFilters');
+    var searchInput = document.getElementById('signatorySearch');
+    var grid = document.getElementById('signatoriesGrid');
+    if (!filterWrap || !grid) return;
+
     var allChip = filterWrap.querySelector('.filter-chip[data-category=""]');
     var catChips = Array.prototype.slice.call(filterWrap.querySelectorAll('.filter-chip[data-category]:not([data-category=""])'));
-    var cards = Array.prototype.slice.call(grid.querySelectorAll('.signatory-card'));
     var emptyMsg = document.getElementById('signatoryEmpty');
 
     function activeCategories() {
@@ -61,6 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function applyFilters() {
       var cats = activeCategories();
       var q = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
+      var cards = Array.prototype.slice.call(grid.querySelectorAll('.signatory-card'));
       var visible = 0;
       cards.forEach(function (card) {
         var cardCats = (card.dataset.categories || '').split('|');
@@ -74,23 +82,34 @@ document.addEventListener('DOMContentLoaded', function () {
       if (emptyMsg) emptyMsg.style.display = visible === 0 ? 'block' : 'none';
     }
 
-    if (allChip) {
-      allChip.addEventListener('click', function () {
-        catChips.forEach(function (c) { c.classList.remove('active'); });
-        allChip.classList.add('active');
-        applyFilters();
+    // Re-running this function (after a live-data refresh) would otherwise
+    // stack duplicate click/input listeners onto the same chip and search
+    // elements, since they're not recreated -- only the cards are. Guard
+    // with a data flag so listeners are attached at most once, while
+    // applyFilters() itself (which does need to see the new cards) always
+    // runs.
+    if (!filterWrap.dataset.filtersWired) {
+      if (allChip) {
+        allChip.addEventListener('click', function () {
+          catChips.forEach(function (c) { c.classList.remove('active'); });
+          allChip.classList.add('active');
+          applyFilters();
+        });
+      }
+      catChips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          if (allChip) allChip.classList.remove('active');
+          chip.classList.toggle('active');
+          if (activeCategories().length === 0 && allChip) allChip.classList.add('active');
+          applyFilters();
+        });
       });
+      if (searchInput) searchInput.addEventListener('input', applyFilters);
+      filterWrap.dataset.filtersWired = '1';
     }
-    catChips.forEach(function (chip) {
-      chip.addEventListener('click', function () {
-        if (allChip) allChip.classList.remove('active');
-        chip.classList.toggle('active');
-        if (activeCategories().length === 0 && allChip) allChip.classList.add('active');
-        applyFilters();
-      });
-    });
-    if (searchInput) searchInput.addEventListener('input', applyFilters);
 
     applyFilters();
   }
+  window.initSignatoryFilters = initSignatoryFilters;
+  initSignatoryFilters();
 });

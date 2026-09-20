@@ -43,9 +43,38 @@ PAGES = [
 # referencing something new.
 STATIC_ASSETS = [
     "images/photos/sauna-for-all-2026-04.jpg",
+    "images/photos/sauna-for-all-2026-05.jpg",
     "images/photos/sauna-for-all-2026-13.jpg",
     "images/photos/sauna-for-all-2026-14.jpg",
+    "images/photos/sauna-for-all-home-hero.jpg",
+    "images/photos/sauna-for-all-signatories-hero.jpg",
     "files/public-sauna-bathing-charter.pdf",
+    "images/headshots/becky-pelkonen.jpg",
+    "images/headshots/polly-wilson.jpg",
+    "images/headshots/charlie-duckworth.jpg",
+    "images/headshots/freddie-mehigan.jpg",
+    "images/headshots/ian-whelan.jpg",
+    "images/headshots/jason-wong.jpg",
+    "images/headshots/azar-eskandarpour.jpg",
+    "images/headshots/juho-pelkonen.jpg",
+    "images/headshots/niamh-murphy.jpg",
+    "images/headshots/mikkel-aaland.jpg",
+    "images/headshots/dalva-lamminmaki.jpg",
+    "images/headshots/steve-crosbie.jpg",
+    "images/headshots/carita-harju.jpg",
+    "images/headshots/sauna-from-finland-logo.jpg",
+    "images/logo/sauna-for-all-orange.png",
+    "images/icons/network.png",
+    "images/icons/heat.png",
+    "images/icons/leaf.png",
+    "images/icons/sun.png",
+    "images/icons/place.png",
+    "images/icons/lattice.png",
+    "images/icons/weave.png",
+    "images/icons/reciprocity.png",
+    "images/icons/circulate.png",
+    "images/icons/seal.png",
+    "images/icons/thumbs-up.png",
 ]
 
 def main():
@@ -55,6 +84,8 @@ def main():
         main_js = f.read()
     with open(os.path.join(ROOT, "js", "news-feed.js")) as f:
         news_feed_js = f.read()
+    with open(os.path.join(ROOT, "js", "signatories-feed.js")) as f:
+        signatories_feed_js = f.read()
 
     if os.path.isdir(DIST):
         shutil.rmtree(DIST)
@@ -68,8 +99,8 @@ def main():
             f"<style>\n{css}\n</style>",
         )
         html = html.replace(
-            '<script src="js/main.js"></script>\n<script src="js/news-feed.js"></script>',
-            f"<script>\n{main_js}\n</script>\n<script>\n{news_feed_js}\n</script>",
+            '<script src="js/main.js"></script>\n<script src="js/news-feed.js"></script>\n<script src="js/signatories-feed.js"></script>',
+            f"<script>\n{main_js}\n</script>\n<script>\n{news_feed_js}\n</script>\n<script>\n{signatories_feed_js}\n</script>",
         )
         if "<style>" not in html or "<script>" not in html:
             raise RuntimeError(
