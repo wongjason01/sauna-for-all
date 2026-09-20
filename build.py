@@ -602,6 +602,33 @@ NOINDEX_WHOLE_SITE = os.environ.get("NOINDEX_WHOLE_SITE", "").lower() in ("1", "
 # Fallback share card. Pages that have a more fitting image pass their own.
 DEFAULT_SHARE_IMAGE = "/images/photos/sauna-for-all-2026-14.jpg"
 
+# ---------------------------------------------------------------------------
+# Google Tag Manager
+# ---------------------------------------------------------------------------
+# Container GTM-NRCW94M5. Emitted by layout() on every page: the loader as
+# high in <head> as it can go, and the <noscript> iframe immediately after
+# <body>, exactly as GTM's own install instructions specify.
+#
+# Set GTM_CONTAINER_ID to "" (or export it empty) to drop both snippets --
+# useful for a local build you don't want reporting into analytics.
+#
+# Note: this loads Google's tag script for every visitor. If a consent banner
+# is added later, GTM's Consent Mode is the place to gate it, not this file.
+GTM_CONTAINER_ID = os.environ.get("GTM_CONTAINER_ID", "GTM-NRCW94M5").strip()
+
+GTM_HEAD = ("""<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','""" + GTM_CONTAINER_ID + """');</script>
+<!-- End Google Tag Manager -->""") if GTM_CONTAINER_ID else ""
+
+GTM_BODY = ("""<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=""" + GTM_CONTAINER_ID + """"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->""") if GTM_CONTAINER_ID else ""
+
 SIGNATORIES_FEED_ENDPOINT = "https://sauna-for-all-signatories-feed.tiny-block-645d.workers.dev"
 
 # How many signatory cards the directory shows before the "Show more" button.
@@ -750,6 +777,7 @@ def layout(title, description, active, body, body_class="", path="/",
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{GTM_HEAD}
 <title>{title}</title>
 <meta name="description" content="{description}">
 <link rel="canonical" href="{canonical}">
@@ -771,6 +799,7 @@ def layout(title, description, active, body, body_class="", path="/",
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="{body_class}">
+{GTM_BODY}
 {nav(active)}
 <main>
 {body}

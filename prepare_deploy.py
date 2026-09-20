@@ -108,10 +108,18 @@ def main():
             '<script src="js/main.js"></script>\n<script src="js/news-feed.js"></script>\n<script src="js/signatories-feed.js"></script>',
             f"<script>\n{main_js}\n</script>\n<script>\n{news_feed_js}\n</script>\n<script>\n{signatories_feed_js}\n</script>",
         )
-        if "<style>" not in html or "<script>" not in html:
+        # Check the source tags are actually gone, rather than that some
+        # <style>/<script> exists. Since the Google Tag Manager loader is an
+        # inline <script> in every page's head, "a <script> is present" stopped
+        # being evidence that the JS replacement above fired.
+        leftovers = [t for t in ('href="css/style.css"', 'src="js/main.js"',
+                                 'src="js/news-feed.js"', 'src="js/signatories-feed.js"')
+                     if t in html]
+        if leftovers or "<style>" not in html:
             raise RuntimeError(
-                f"{name}: expected href/src not found -- check build.py's "
-                "asset tags haven't changed and update this script to match."
+                f"{name}: asset inlining did not fire (still linking {leftovers}) "
+                "-- check build.py's asset tags haven't changed and update this "
+                "script to match."
             )
         out_path = os.path.join(DIST, name)
         with open(out_path, "w") as f:
