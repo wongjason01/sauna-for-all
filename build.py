@@ -1269,8 +1269,8 @@ def page_signatories():
                      if s["url"] and s["url"] != "#" else f'<span class="signatory-name-link">{s["name"]}</span>')
         return f'''<div class="signatory-card" data-categories="{cats_attr}" data-search="{search_attr}" data-country="{s["country"]}">
       <div class="signatory-card-top">
-        {logo_tile(s)}
         <div class="category-pills">{category_pills(s["categories"])}</div>
+        {logo_tile(s)}
       </div>
       {name_html}
       {signed_by_html}
@@ -1344,7 +1344,7 @@ def page_signatories():
       <span class="eyebrow">Signatories</span>
       <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
         <h2 style="margin:0;">The people making it happen</h2>
-        <img src="/images/icons/thumbs-up.png" alt="" style="width:56px; height:56px; flex-shrink:0;" loading="lazy">
+        <img src="/images/icons/thumbs-up.png" alt="" style="width:67px; height:67px; flex-shrink:0;" loading="lazy">
       </div>
       <p class="lede muted" style="margin-top:14px;">These are the operators, communities, and advocates who have committed to public sauna as a common good. Find someone near you, or someone doing work like yours.</p>
       <p class="small muted" style="margin-top:10px;">We&rsquo;re open for new signatories right now. <a href="#sign" style="text-decoration:underline; font-weight:700;">Sign the Charter &rarr;</a></p>
