@@ -1,7 +1,7 @@
 # Sauna for All
 
 Marketing site for Sauna for All and the Public Sauna-Bathing Charter.
-Live at https://sauna-for-all.tiny-block-645d.workers.dev
+Live at https://saunaforall.org
 
 ## How it works
 
@@ -22,6 +22,11 @@ committed.
 Cloudflare Workers Builds is connected to this repo. A commit to `main`
 rebuilds and redeploys automatically; `wrangler.toml` points it at `dist/`.
 No manual upload step.
+
+The site answers on `saunaforall.org`, with `www` 301-redirecting to it. The
+old `*.workers.dev` address is switched off, so there is only ever one copy of
+the site. `SITE_URL` in `build.py` is the single source for every absolute URL
+-- canonical tags, Open Graph, the sitemap and robots.txt all derive from it.
 
 ## Content
 
