@@ -88,9 +88,12 @@ document.addEventListener('DOMContentLoaded', function () {
     var catsAttr = (s.categories || []).join('|');
     var searchAttr = [s.name, s.signedBy || '', s.country || ''].join(' ');
     var hasUrl = s.url && s.url !== '#';
-    var nameHtml = hasUrl
+    // Wrapped in an <h3>, matching build.py's signatory_card -- the names
+    // are the page's long tail of brand searches.
+    var nameInner = hasUrl
       ? '<a href="' + escapeHtml(s.url) + '" class="signatory-name-link" target="_blank" rel="noopener">' + escapeHtml(s.name) + '</a>'
       : '<span class="signatory-name-link">' + escapeHtml(s.name) + '</span>';
+    var nameHtml = '<h3 class="signatory-name">' + nameInner + '</h3>';
     var signedByHtml = s.signedBy ? '<div class="small muted">' + escapeHtml(s.signedBy) + '</div>' : '';
     var commitmentHtml = s.commitment ? '<p class="signatory-commitment">&ldquo;' + escapeHtml(s.commitment) + '&rdquo;</p>' : '';
     return '<div class="signatory-card" data-categories="' + escapeHtml(catsAttr) + '" data-search="' + escapeHtml(searchAttr) + '" data-country="' + escapeHtml(s.country || '') + '">' +
