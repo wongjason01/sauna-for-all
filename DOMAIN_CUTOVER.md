@@ -1,79 +1,141 @@
 # Pointing saunaforall.org at the new site
 
 The site is deployed as a Cloudflare Worker (static assets), currently reachable at the
-default `*.workers.dev` address rather than the real domain. saunaforall.org is already
-registered (per earlier notes in this project); this is how to connect it once the rebuilt
-site is deployed and approved for launch.
+default `*.workers.dev` address. This is how to move saunaforall.org onto it.
 
-## 1. Check where the domain's DNS is managed
+Written against the real zone file exported from GoDaddy on 2026-09-20. If the zone has
+changed since, re-export and re-check before following this.
 
-Look up saunaforall.org's nameservers (e.g. `dig NS saunaforall.org` from a terminal, or a
-site like whatsmydns.net). There are two cases:
+## The one thing that can go badly wrong
 
-**Case A: Nameservers already point to Cloudflare** (they'll look like
-`xxx.ns.cloudflare.com`). The domain is already active in a Cloudflare account. Skip to
-step 2.
+**This domain carries live email.** `MX` points at
+`saunaforall-org.mail.protection.outlook.com` — Microsoft 365, provisioned through
+GoDaddy (hence the `NETORGFT21144491.onmicrosoft.com` verification record and the
+GoDaddy-flavoured SPF). Moving nameservers to Cloudflare without carrying every mail
+record across stops mail reaching hei@saunaforall.org, and it fails quietly: senders get
+bounces, the mailbox just looks unusually quiet.
 
-**Case B: Nameservers point somewhere else** (the registrar's own DNS, GoDaddy, Namecheap,
-etc.). Two options:
-- Move the domain's nameservers to Cloudflare: add the domain as a new "site" in the
-  Cloudflare dashboard, which gives two Cloudflare nameservers to set at the registrar.
-  This is the standard path and also gives free SSL, caching, and analytics.
-- Or, if the domain must stay on its current DNS provider, a Worker custom domain still
-  needs the domain's DNS to be on Cloudflare -- Cloudflare Workers custom domains do not
-  support "external DNS with a CNAME," so moving nameservers is effectively required for
-  this hosting setup.
+Two details make it less forgiving than a typical move:
 
-Changing nameservers can take anywhere from a few minutes to 24-48 hours to propagate
-fully, so this step should happen first and with some lead time before the target launch
-date, not on launch day itself.
+- `_dmarc` is set to `p=quarantine`. If SPF or DKIM don't line up after the move,
+  legitimate mail goes to recipients' spam folders rather than failing loudly.
+- The DKIM records are CNAMEs, so if either is wrong or missing, signing breaks.
 
-## 2. Attach the domain to the Worker
+The safety net is that **Cloudflare holds a new zone inactive until the nameservers
+actually change.** So every record can be created and checked in the Cloudflare
+dashboard first, and the GoDaddy switch becomes the last step rather than the first.
+Do it in that order.
 
-Once saunaforall.org is active in the Cloudflare account (Case A, or after completing
-Case B):
+## 1. Add the domain to Cloudflare (nothing goes live yet)
 
-1. Go to the Cloudflare dashboard -> Workers & Pages -> the `sauna-for-all` Worker.
-2. Open the **Settings** tab -> **Domains & Routes**.
-3. Click **Add** -> **Custom Domain**.
-4. Enter `saunaforall.org` (and, in a separate step, `www.saunaforall.org` if the site
-   should also answer on the www subdomain).
-5. Cloudflare provisions an SSL certificate automatically -- this usually takes a few
-   minutes, occasionally longer.
+Use the **same Cloudflare account that holds the `sauna-for-all` Worker** — a custom
+domain can only attach to a Worker in the same account.
 
-## 3. Decide on the www vs bare-domain redirect
+Dashboard → Add a site → `saunaforall.org` → Free plan → let the scan run. It will
+import most of what's below automatically. Treat the import as a draft, not as done:
+with a GoDaddy-managed Microsoft 365 tenant the scan does sometimes miss the DKIM and
+autodiscover entries.
 
-Pick one as the canonical address and redirect the other to it (search engines and
-sharing links prefer a single canonical URL):
+## 2. Check every record against this table
 
-- Add both `saunaforall.org` and `www.saunaforall.org` as custom domains on the Worker.
-- Add a Cloudflare Redirect Rule (Rules -> Redirect Rules in the dashboard) sending one to
-  the other with a 301, e.g. `www.saunaforall.org/*` -> `https://saunaforall.org/$1`.
+This is the full set to exist in Cloudflare before the nameservers move. Add anything
+missing; correct anything that differs.
 
-## 4. Verify before announcing the new address
+| Type | Name | Value | Proxy |
+|---|---|---|---|
+| MX | `@` | `saunaforall-org.mail.protection.outlook.com` (priority 0) | — |
+| TXT | `@` | `NETORGFT21144491.onmicrosoft.com` | — |
+| TXT | `@` | `v=spf1 include:secureserver.net -all` | — |
+| TXT | `_dmarc` | `v=DMARC1; p=quarantine; adkim=r; aspf=r; rua=mailto:dmarc_rua@onsecureserver.net;` | — |
+| CNAME | `autodiscover` | `autodiscover.outlook.com` | DNS only |
+| CNAME | `selector1._domainkey` | `selector1-saunaforall-org._domainkey.netorgft21144491.p-v1.dkim.mail.microsoft` | DNS only |
+| CNAME | `selector2._domainkey` | `selector2-saunaforall-org._domainkey.netorgft21144491.p-v1.dkim.mail.microsoft` | DNS only |
+| CNAME | `msoid` | `clientconfig.microsoftonline-p.net` | DNS only |
+| CNAME | `lyncdiscover` | `webdir.online.lync.com` | DNS only |
+| CNAME | `sip` | `sipdir.online.lync.com` | DNS only |
+| CNAME | `email` | `email.secureserver.net` | DNS only |
+| SRV | `_sip._tls` | priority 100, weight 1, port 443, target `sipdir.online.lync.com` | — |
+| SRV | `_sipfederationtls._tcp` | priority 100, weight 1, port 5061, target `sipfed.online.lync.com` | — |
 
-- Load `https://saunaforall.org` directly and click through every nav link.
-- Confirm the padlock/certificate is valid (Cloudflare's automatic SSL).
-- Check `https://www.saunaforall.org` redirects correctly if that's set up.
-- Re-run the Section 9 "Done" checklist against the live domain, not just the
-  `workers.dev` address -- a few things (favicon, absolute links, share previews) can
-  behave differently once real domain matters (e.g. Open Graph tags reading the request's
-  own host).
+**Every CNAME above must be "DNS only" (grey cloud), not proxied.** Cloudflare defaults
+some CNAMEs to proxied, and a proxied `autodiscover` breaks Outlook's account setup.
+Only the website records get the orange cloud.
 
-## 5. After cutover
+Deliberately **not** carried over:
 
-- If the CMS (Sveltia + Cloudflare Workers Builds git auto-deploy -- see
-  `CMS_SETUP.md`) is wired up, double check its auth Worker and any redirect URLs
-  reference `saunaforall.org` rather than the `workers.dev` address, since OAuth-style
-  callbacks are often locked to a specific host.
-- Update anywhere the old `workers.dev` URL might have been shared already (social bios,
-  the Google Form's own confirmation text if it links back to the site, etc.) to the real
-  domain.
+- `A @ → WebsiteBuilder Site` — the GoDaddy Website Builder page currently at the apex.
+  The Worker replaces it. Confirm nobody still depends on that page before cutting over.
+- `CNAME www → @` — `www` becomes its own custom domain on the Worker (step 4) rather
+  than a CNAME.
+- `_domainconnect` — GoDaddy's own automation hook; meaningless once DNS is elsewhere.
+- `NS` and `SOA` — Cloudflare supplies its own.
 
-## What I can't do from here
+Copy SPF and DMARC **exactly as they are**. The SPF authorises `secureserver.net` rather
+than `spf.protection.outlook.com`, which looks wrong for Microsoft 365 but is what
+GoDaddy's resold tenants use. A DNS move is not the moment to also change mail policy —
+change one thing at a time, and revisit SPF separately afterwards if it needs it.
 
-Attaching a custom domain and changing nameservers both require access to the Cloudflare
-account and (for Case B) the domain registrar's account -- credentials this project
-doesn't have and shouldn't be given to an automated process. This document is the
-step-by-step for whoever has that access (Jason or Becky) to follow in the Cloudflare and
-registrar dashboards directly.
+Verify the two DKIM targets against Microsoft 365 admin centre (Settings → Domains →
+saunaforall.org → DNS records) rather than trusting the export. If GoDaddy's exporter
+truncated them, mail still flows but arrives unsigned, and `p=quarantine` then pushes it
+to spam.
+
+## 3. Change the nameservers at GoDaddy
+
+Only once step 2 is complete. GoDaddy → My Products → saunaforall.org → DNS →
+Nameservers → Change → "I'll use my own nameservers" → enter the two Cloudflare
+nameservers shown on the Cloudflare overview page.
+
+Propagation is usually well under an hour for GoDaddy, but allow up to 48. Don't do this
+on the morning of a launch or the day before anyone's away.
+
+Keep the exported zone file. It is the rollback: setting the nameservers back to
+`ns57`/`ns58.domaincontrol.com` restores the old setup exactly.
+
+## 4. Attach the domain to the Worker
+
+Cloudflare dashboard → Workers & Pages → `sauna-for-all` → Settings → Domains & Routes →
+Add → Custom Domain. Add `saunaforall.org`, then repeat for `www.saunaforall.org`.
+Certificates are issued automatically, usually within a few minutes.
+
+## 5. Pick one canonical address
+
+Search engines and share previews want a single address. Add both as custom domains,
+then Rules → Redirect Rules → 301 from the one you don't want to the one you do, e.g.
+`www.saunaforall.org/*` → `https://saunaforall.org/$1`.
+
+## 6. Turn off the workers.dev address
+
+Settings → Domains & Routes → disable the `workers.dev` route. This leaves exactly one
+copy of the site on the internet, so the preview address can't be indexed alongside the
+real one or linger in anyone's bookmarks. Do this only after the custom domain is
+confirmed working.
+
+## 7. Verify — mail first, then the site
+
+Mail is the part that fails silently, so check it first:
+
+- Send a message from an outside address to hei@saunaforall.org and confirm it arrives.
+- Send one *from* the domain to an outside address and check the headers show SPF and
+  DKIM passing.
+- Confirm Outlook can still set up the account from scratch (that's `autodiscover`).
+
+Then the site: load `https://saunaforall.org`, click every nav link, confirm the
+certificate is valid, confirm `www` redirects, and re-check the share preview and
+favicon behaviour now that a real domain is in play.
+
+## 8. Afterwards
+
+- Update `SITE_URL` in `build.py` (see the SEO notes) so canonical tags, Open Graph URLs
+  and the sitemap all point at the real domain, and redeploy.
+- Update anywhere the workers.dev address was shared — social bios, the Google Form's
+  confirmation text, the Substack.
+- Note for later: with DNS off GoDaddy, GoDaddy can no longer auto-manage the Microsoft
+  365 records. If Microsoft rotates DKIM keys or adds a record, it has to be applied in
+  Cloudflare by hand.
+
+## What can't be done from here
+
+Changing nameservers and attaching custom domains need the GoDaddy and Cloudflare
+account logins, which this project doesn't hold and shouldn't. This document is the
+click-by-click for whoever does.

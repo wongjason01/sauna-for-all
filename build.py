@@ -579,6 +579,29 @@ SUBSTACK_SUBSCRIBE_URL = "https://saunaforall.substack.com/subscribe"
 
 # Worker that proxies the live signatories Google Sheet as JSON, so the
 # directory and the homepage tally update without a rebuild.
+# ---------------------------------------------------------------------------
+# Site address, and everything absolute that hangs off it
+# ---------------------------------------------------------------------------
+# Canonical tags, Open Graph URLs, the sitemap and the JSON-LD all build their
+# absolute URLs from this one value, so moving to the real domain is a
+# one-line change rather than a hunt through eight pages.
+#
+# AT CUTOVER: once saunaforall.org is attached to the Worker and answering,
+# change this to "https://saunaforall.org" and redeploy. See DOMAIN_CUTOVER.md.
+SITE_URL = os.environ.get(
+    "SITE_URL", "https://sauna-for-all.tiny-block-645d.workers.dev").rstrip("/")
+
+# While the site lives on the workers.dev preview address there's an argument
+# for keeping it out of search results entirely, so the preview can't be
+# indexed and then compete with the real domain. Cloudflare can simply turn
+# the workers.dev route off after cutover, which is cleaner -- so this stays
+# False by default and is here for the case where the preview needs to stay
+# reachable but unindexed.
+NOINDEX_WHOLE_SITE = os.environ.get("NOINDEX_WHOLE_SITE", "").lower() in ("1", "true", "yes")
+
+# Fallback share card. Pages that have a more fitting image pass their own.
+DEFAULT_SHARE_IMAGE = "/images/photos/sauna-for-all-2026-14.jpg"
+
 SIGNATORIES_FEED_ENDPOINT = "https://sauna-for-all-signatories-feed.tiny-block-645d.workers.dev"
 
 # How many signatory cards the directory shows before the "Show more" button.
@@ -664,7 +687,7 @@ def footer():
       </div>
       <div class="footer-links">
         <div class="footer-col">
-          <h4>The Charter</h4>
+          <h2 class="footer-heading">The Charter</h2>
           <a href="/charter">Read the Charter</a>
           <a href="/signatories#sign">Sign the Charter</a>
           <a href="/signatories">Signatories</a>
@@ -672,13 +695,13 @@ def footer():
           <a href="/faqs">FAQs</a>
         </div>
         <div class="footer-col">
-          <h4>About</h4>
+          <h2 class="footer-heading">About</h2>
           <a href="/about">About Sauna for All</a>
           <a href="/about#stewards">Founding Stewards</a>
           <a href="/news">News</a>
         </div>
         <div class="footer-col">
-          <h4>Get involved</h4>
+          <h2 class="footer-heading">Get involved</h2>
           <a href="{SUBSTACK_URL or '#'}">Newsletter</a>
           <a href="{OPEN_COLLECTIVE_URL}">Support our work</a>
           <a href="/contact">Contact</a>
@@ -696,14 +719,55 @@ def footer():
 
 HEAD_EXTRA = ""
 
-def layout(title, description, active, body, body_class=""):
+def layout(title, description, active, body, body_class="", path="/",
+           share_image=DEFAULT_SHARE_IMAGE, noindex=False, schema=None,
+           og_type="website"):
+    """Builds a page.
+
+    `title` is the complete title tag, not a prefix -- the SEO tags are
+    written as whole strings (see SEO_TAGS.md) precisely so the most
+    valuable slot on each page isn't spent on a generic suffix.
+
+    `path` is the page's own URL path; every absolute URL on the page is
+    built from SITE_URL + path, so a domain move is a one-line change.
+
+    `schema` is a dict (or list of dicts) of JSON-LD emitted in the head.
+    `noindex` keeps a page out of search results while it's still a stub."""
+    canonical = f"{SITE_URL}{path}"
+    image_url = f"{SITE_URL}{share_image}"
+    robots = ('<meta name="robots" content="noindex, follow">'
+              if noindex or NOINDEX_WHOLE_SITE else
+              '<meta name="robots" content="index, follow">')
+    schema_html = ""
+    if schema:
+        blocks = schema if isinstance(schema, list) else [schema]
+        schema_html = "\n".join(
+            '<script type="application/ld+json">\n'
+            + json.dumps(b, indent=2, ensure_ascii=False)
+            + '\n</script>' for b in blocks)
     return f'''<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title} | Sauna for All</title>
+<title>{title}</title>
 <meta name="description" content="{description}">
+<link rel="canonical" href="{canonical}">
+{robots}
+<meta property="og:site_name" content="Sauna for All">
+<meta property="og:type" content="{og_type}">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{description}">
+<meta property="og:url" content="{canonical}">
+<meta property="og:image" content="{image_url}">
+<meta property="og:locale" content="en_CA">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{description}">
+<meta name="twitter:image" content="{image_url}">
+<link rel="icon" href="/images/logo/sauna-for-all-orange.png" type="image/png">
+<link rel="apple-touch-icon" href="/images/logo/sauna-for-all-orange.png">
+{schema_html}
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="{body_class}">
@@ -847,7 +911,10 @@ def page_home():
   <div class="container hero-grid">
     <div class="hero-copy">
       <span class="eyebrow">A grassroots global movement</span>
-      <h1>SAUNA FOR ALL</h1>
+      <!-- The wordmark stays as the logo lockup in the header; the H1 carries
+           the phrase people actually search for. .hero-wordmark keeps the
+           original display treatment. -->
+      <h1 class="hero-wordmark">Public and community sauna, kept as a common good</h1>
       <p class="lede">Ten shared principles for public sauna that is safe, accessible, culturally stewarded, and rooted in the common good. Read and sign the Public Sauna-Bathing Charter.</p>
       <div class="hero-actions">
         <a href="/signatories#sign" class="btn btn-primary">Sign the Charter</a>
@@ -973,10 +1040,28 @@ def page_home():
 </section>'''
 
     body = hero + counter + photo_band + charter_summary + why_now + evidence + who_we_are + newsletter
+    # Organization schema: what ties scattered brand mentions -- Instagram,
+    # LinkedIn, Substack, Open Collective -- back to this site.
+    organization_schema = {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Sauna for All",
+        "url": f"{SITE_URL}/",
+        "logo": f"{SITE_URL}/images/logo/sauna-for-all-orange.png",
+        "description": ("A grassroots global movement for public and community "
+                        "sauna as a common good, stewarding the Public "
+                        "Sauna-Bathing Charter."),
+        "email": "hei@saunaforall.org",
+        "foundingDate": "2026",
+        "sameAs": [url for _name, url, _icon in SOCIAL_LINKS] + [OPEN_COLLECTIVE_URL],
+    }
     write("index.html", layout(
-        "Home",
-        "Sauna for All is a grassroots global movement guiding public sauna-bathing as common good, through the Public Sauna-Bathing Charter.",
-        "home", body))
+        "Public Sauna, Common Good | Sauna for All",
+        "A global grassroots movement for community sauna. Ten shared principles, "
+        "one charter, and signatories in nine countries. Read it, then sign it.",
+        "home", body, path="/",
+        share_image="/images/photos/sauna-for-all-2026-23.jpg",
+        schema=organization_schema))
 
 # ---------------------------------------------------------------------------
 # OVERVIEW PAGE (the Charter, in full — formerly charter.html)
@@ -991,8 +1076,9 @@ def page_charter():
     charter_header = f'''<section class="section bg-cream" style="padding-bottom:0;" id="charter-header">
   <div class="container two-col" style="align-items:center;">
    <div>
-    <span class="eyebrow" style="color:var(--gold);">The Public Sauna-Bathing Charter</span>
-    <h1 style="font-size:clamp(2rem,4vw,2.9rem); margin:14px 0 20px; max-width:22ch;">Ten principles for public sauna as common good</h1>
+    <span class="eyebrow" style="color:var(--gold);">The Charter</span>
+    <h1 style="font-size:clamp(2rem,4vw,2.9rem); margin:14px 0 20px; max-width:22ch;">The Public Sauna-Bathing Charter</h1>
+    <p class="lede" style="font-weight:700; margin:0 0 14px;">Ten principles for public sauna as common good</p>
     <p class="lede muted" style="max-width:64ch;">The Charter sets out shared principles for developing and caring for public sauna responsibly. It gives communities, operators, governments, funders, and researchers a common reference point. Signatories commit to showing how these principles guide their decisions and daily practice.</p>
     <div class="hero-actions" style="margin-top:26px;">
       <a href="/signatories#sign" class="btn btn-primary">Sign the Charter</a>
@@ -1020,7 +1106,12 @@ def page_charter():
     </div>'''
 
     def movement_head(range_label, tag, sub):
-        return f'''<div class="movement-title"><span class="bar"></span><span class="tag">{range_label} &middot; {tag}</span><span class="sub">&ndash; {sub}</span></div>'''
+        # An <h2> rather than a <div>, so the four groups are real sections
+        # with the ten principles (already <h3>) nested under them. That makes
+        # each principle individually crawlable and gives search engines jump
+        # links into the page. Styling is unchanged -- .movement-title already
+        # sets its own size and weight.
+        return f'''<h2 class="movement-title"><span class="bar"></span><span class="tag">{range_label} &middot; {tag}</span><span class="sub">&ndash; {sub}</span></h2>'''
 
     RANGE_LABELS = {"Practice": "01&ndash;03", "Keeping": "04&ndash;06", "Tending": "07&ndash;08", "Stewardship": "09&ndash;10"}
 
@@ -1038,7 +1129,7 @@ def page_charter():
     </div>
     {"".join(movement(g) for g in PRINCIPLE_GROUPS)}
     <div class="info-card" style="margin-top:20px; padding:32px;">
-      <h3 style="font-size:1.15rem;">Putting the principles into practice</h3>
+      <h2 style="font-size:1.15rem;">Putting the principles into practice</h2>
       <p class="muted" style="margin:10px 0 18px;">Sign up for news to receive practical guidance on applying each principle, along with case studies, resources, and invitations to online meet-ups with operators and communities doing this work.</p>
       <a href="{SUBSTACK_SUBSCRIBE_URL}" class="btn btn-solid-orange" style="display:inline-block;">Sign up</a>
     </div>
@@ -1121,9 +1212,11 @@ def page_charter():
 
     body = charter_header + principles + who_can_sign + how_signing_works + is_isnt
     write("charter.html", layout(
-        "The Charter",
-        "The Public Sauna-Bathing Charter: ten shared principles, who can sign, and how signing works.",
-        "charter", body))
+        "The Public Sauna-Bathing Charter | Sauna for All",
+        "Ten shared principles for public and community sauna: access, care, "
+        "stewardship and the common good. Read the Charter and how signing works.",
+        "charter", body, path="/charter",
+        share_image="/images/photos/sauna-for-all-2026-12.jpg"))
 
 # ---------------------------------------------------------------------------
 # SIGNATORIES PAGE
@@ -1159,7 +1252,7 @@ def page_signatories():
   <div class="container two-col">
     <div>
       <span class="eyebrow" style="color:var(--gold);">Signatories</span>
-      <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px; max-width:24ch;">You&rsquo;re in good company</h1>
+      <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px; max-width:24ch;">Who has signed the Charter</h1>
       <p class="lede muted" style="max-width:52ch;">Signatories come from many places and many roles, and each one has said what they will do to support public sauna as a common good. See who has joined, find someone to support your application, or add your name.</p>
       <div class="hero-actions" style="margin-top:22px;">
         <a href="#sign" class="btn btn-primary">Sign the Charter</a>
@@ -1180,8 +1273,8 @@ def page_signatories():
     sign = f'''<section class="section" id="sign" style="background:#FDF4B0;">
   <div class="container">
     <div class="section-head">
-      <span class="eyebrow">Sign the Charter</span>
-      <h2>Add your name</h2>
+      <span class="eyebrow">Add your name</span>
+      <h2>Sign the Charter</h2>
       <p class="lede muted">Signing means choosing the principles closest to your work and saying, in your own words, how you will put them into practice. It takes about 15 to 30 minutes.</p>
     </div>
     <div class="two-col">
@@ -1265,8 +1358,12 @@ def page_signatories():
         commitment_html = (f'<p class="signatory-commitment">&ldquo;{s["commitment"]}&rdquo;</p>'
                             if s["commitment"] else "")
         signed_by_html = f'<div class="small muted">{s["signed_by"]}</div>' if s.get("signed_by") else ""
-        name_html = (f'<a href="{s["url"]}" class="signatory-name-link" target="_blank" rel="noopener">{s["name"]}</a>'
-                     if s["url"] and s["url"] != "#" else f'<span class="signatory-name-link">{s["name"]}</span>')
+        # Each signatory name is an H3, which turns the directory into a long
+        # tail of brand searches -- Kamu Sauna, Community Sauna Network,
+        # SaunaGlo -- that can land on this page. Styling is unchanged.
+        inner = (f'<a href="{s["url"]}" class="signatory-name-link" target="_blank" rel="noopener">{s["name"]}</a>'
+                 if s["url"] and s["url"] != "#" else f'<span class="signatory-name-link">{s["name"]}</span>')
+        name_html = f'<h3 class="signatory-name">{inner}</h3>'
         return f'''<div class="signatory-card" data-categories="{cats_attr}" data-search="{search_attr}" data-country="{s["country"]}">
       <div class="signatory-card-top">
         <div class="category-pills">{category_pills(s["categories"])}</div>
@@ -1411,9 +1508,11 @@ def page_signatories():
     body = (signatories_header + sign + directory + support + regional_partners
             + signatory_order_script + signatory_logos_script)
     write("signatories.html", layout(
-        "Signatories",
-        "Sign the Public Sauna-Bathing Charter, see who has already signed, and find out how to support the movement.",
-        "signatories", body))
+        "Who Has Signed the Charter | Sauna for All",
+        "Community sauna operators, researchers, designers and advocates in nine "
+        "countries have signed the Public Sauna-Bathing Charter. Add your name.",
+        "signatories", body, path="/signatories",
+        share_image="/images/photos/sauna-for-all-signatories-hero.jpg"))
 
 # ---------------------------------------------------------------------------
 # ABOUT PAGE (mission + founding stewards, combined)
@@ -1451,7 +1550,7 @@ def page_about():
     body = f'''<section class="section bg-cream" style="padding-bottom:0;" id="story">
   <div class="container two-col">
     <div>
-      <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 18px;">Public sauna as common good</h1>
+      <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 18px;">A grassroots movement for public and community sauna</h1>
       <p class="lede muted" style="max-width:52ch;">Around the world, people are rediscovering public sauna, both for their own wellbeing and for the life it brings to communities.</p>
       <p class="lede muted" style="max-width:52ch; margin-top:16px;">Sauna for All is a grassroots movement guiding this resurgence through shared values, evidence, and collaboration.</p>
       <p class="lede muted" style="max-width:52ch; margin-top:16px;">Our aim is for public sauna to grow as a trusted part of civic and cultural life, rooted in the common good.</p>
@@ -1479,9 +1578,10 @@ def page_about():
 <section class="section bg-white" id="stewards">
   <div class="container">
     <div class="section-head">
-      <span class="eyebrow">Founding Stewards</span>
-      <h2>Guided by an international steering group</h2>
-      <p class="lede muted">The founding stewards are practitioners, researchers, and community leaders who run, study, and champion public sauna in their own communities. Together, they care for the Charter, support signatories in keeping their commitments, and help build the shared knowledge and research that strengthen public sauna around the world.</p>
+      <span class="eyebrow">About</span>
+      <h2>Founding stewards</h2>
+      <p class="lede" style="font-weight:700; margin-top:10px;">Guided by an international steering group</p>
+      <p class="lede muted" style="margin-top:10px;">The founding stewards are practitioners, researchers, and community leaders who run, study, and champion public sauna in their own communities. Together, they care for the Charter, support signatories in keeping their commitments, and help build the shared knowledge and research that strengthen public sauna around the world.</p>
     </div>
     <div class="people-grid">{stewards_html}</div>
     <p class="small muted" style="margin-top:34px; font-weight:700;">With Special Thanks to Advisors</p>
@@ -1492,9 +1592,10 @@ def page_about():
 <section class="section bg-cream" id="gratitude">
   <div class="container two-col">
     <div>
-      <span class="eyebrow">With gratitude</span>
-      <h2>Many have carried the water</h2>
-      <p class="lede muted">People across the sauna world have shared their knowledge and encouragement as the Charter took shape. We thank Sauna from Finland for welcoming this work at the World Sauna Forum, the International Sauna Congress for making room for it, and the grassroots organisers who have stepped forward as early signatories.</p>
+      <span class="eyebrow">About</span>
+      <h2>With gratitude</h2>
+      <p class="lede" style="font-weight:700; margin-top:10px;">Many have carried the water</p>
+      <p class="lede muted" style="margin-top:10px;">People across the sauna world have shared their knowledge and encouragement as the Charter took shape. We thank Sauna from Finland for welcoming this work at the World Sauna Forum, the International Sauna Congress for making room for it, and the grassroots organisers who have stepped forward as early signatories.</p>
       <a href="/signatories" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the signatories and wider network &rarr;</a>
     </div>
     <div>
@@ -1536,9 +1637,11 @@ def page_about():
   </div>
 </section>'''
     write("about.html", layout(
-        "About",
-        "Sauna for All is a grassroots movement guiding public sauna-bathing as common good, and the founding stewards behind it.",
-        "about", body))
+        "About Sauna for All | A Community Sauna Movement",
+        "Volunteer-run and guided by community sauna practitioners in Canada, the "
+        "UK, Ireland and Mexico. Our story, our founding stewards, our thanks.",
+        "about", body, path="/about",
+        share_image="/images/photos/sauna-for-all-2026-13.jpg"))
 
 # ---------------------------------------------------------------------------
 # FAQS PAGE
@@ -1743,17 +1846,38 @@ def page_faqs():
     ]
 
     def faq_item(n, q, a):
+        # The question is a real <h2> inside the <summary> (which is allowed
+        # to carry heading content) rather than plain text, so each answer is
+        # a named section a search engine can match against a typed question.
+        # CSS keeps it looking exactly as it did.
         return (f'<details class="faq-item" id="faq-{n}">'
-                f'<summary>{q}<svg class="faq-caret" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1.5l5 5 5-5"/></svg></summary>'
+                f'<summary><h2 class="faq-question">{q}</h2>'
+                f'<svg class="faq-caret" viewBox="0 0 12 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M1 1.5l5 5 5-5"/></svg></summary>'
                 f'<div class="faq-answer">{a}</div></details>')
     faqs_html = "".join(faq_item(i, q, a) for i, (q, a) in enumerate(FAQS, start=1))
+
+    # FAQPage schema -- the strongest structured-data opportunity on the site,
+    # since these answers can surface directly in search results. The answer
+    # text is the rendered HTML with tags stripped, so the two can't drift.
+    faq_schema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": _strip_html(q),
+                "acceptedAnswer": {"@type": "Answer", "text": _strip_html(a)},
+            }
+            for q, a in FAQS
+        ],
+    }
 
     version_line = '<p class="small muted" style="margin-top:14px;">Version 1, August 19, 2026</p>'
 
     body = f'''<section class="section bg-cream" style="padding-bottom:0;">
   <div class="container">
     <span class="eyebrow" style="color:var(--gold);">FAQs</span>
-    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Frequently asked questions</h1>
+    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Frequently asked questions about the Charter</h1>
     <p class="lede muted" style="max-width:64ch;">Answers to common questions about signing, the Charter&rsquo;s scope, and governance.</p>
     {version_line}
   </div>
@@ -1764,9 +1888,10 @@ def page_faqs():
   </div>
 </section>'''
     write("faqs.html", layout(
-        "FAQs",
-        "Frequently asked questions about the Public Sauna-Bathing Charter and the Sauna for All movement.",
-        "faqs", body))
+        "Public Sauna-Bathing Charter FAQs | Sauna for All",
+        "Who can sign, what signing commits you to, whether there is a fee, and "
+        "why 2027 matters. Answers for community sauna operators and supporters.",
+        "faqs", body, path="/faqs", schema=faq_schema))
 
 # ---------------------------------------------------------------------------
 # NEWS PAGE
@@ -1792,7 +1917,7 @@ def page_news():
     news_header = f'''<section class="section bg-cream" style="padding-bottom:0;" id="news-header">
   <div class="container">
     <span class="eyebrow" style="color:var(--gold);">News</span>
-    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Stories and updates from the movement</h1>
+    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">News from the community sauna movement</h1>
     <p class="lede muted" style="max-width:64ch;">News from Sauna for All, and coverage of public sauna and the Charter from around the world.</p>
   </div>
 </section>'''
@@ -1864,10 +1989,32 @@ def page_news():
 </section>'''
 
     body = news_header + updates + news_newsletter + featured
+    # Article schema per post, so each one can stand on its own in search
+    # rather than only as part of the index page.
+    article_schema = [
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": p["title"],
+            "url": p["link"],
+            "datePublished": p["date_iso"],
+            "description": _strip_html(p.get("summary", "")),
+            "author": {"@type": "Organization", "name": "Sauna for All"},
+            "publisher": {
+                "@type": "Organization",
+                "name": "Sauna for All",
+                "logo": {"@type": "ImageObject",
+                         "url": f"{SITE_URL}/images/logo/sauna-for-all-orange.png"},
+            },
+            **({"image": p["image"]} if p.get("image") else {}),
+        }
+        for p in posts
+    ]
     write("news.html", layout(
-        "News",
-        "News from Sauna for All, and coverage of public sauna and the Charter from around the world.",
-        "news", body))
+        "Community Sauna News and Updates | Sauna for All",
+        "Stories from the movement and coverage of public and community sauna "
+        "worldwide. Updates on the Charter, new signatories, and what comes next.",
+        "news", body, path="/news", schema=article_schema or None))
 
 # ---------------------------------------------------------------------------
 # RESOURCES PAGE (SPEC.md Section 6.6 / 7.6)
@@ -1905,12 +2052,13 @@ def page_resources():
     body = f'''<section class="section bg-cream" style="padding-bottom:0;" id="resources-header">
   <div class="container">
     <span class="eyebrow" style="color:var(--gold);">Resources</span>
-    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px; max-width:20ch;">Tools for building public sauna well</h1>
+    <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px; max-width:20ch;">Tools for building community sauna well</h1>
     <p class="lede muted" style="max-width:64ch;">We&rsquo;re gathering guidance, research, and real examples to help operators, communities, and decision-makers put the Charter&rsquo;s principles into practice.</p>
   </div>
 </section>
 <section class="section bg-cream">
   <div class="container">
+    <h2 style="font-size:1.3rem; margin-bottom:18px;">What we&rsquo;re gathering</h2>
     <div class="card-grid-4">{categories_html}</div>
     <div class="info-card" style="margin-top:28px;">
       <p style="margin-bottom:14px;">Resources coming soon. Sign up for news to hear when they&rsquo;re ready.</p>
@@ -1919,10 +2067,15 @@ def page_resources():
     <p class="small muted" style="margin-top:20px;">Have a resource to share? Want to collaborate on a case study? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch &rarr;</a></p>
   </div>
 </section>'''
+    # Every section on this page still reads "coming soon". A page that ranks
+    # and then disappoints costs more than one that isn't indexed yet, so it
+    # stays out of search results until at least one category holds something
+    # real -- at which point this flips on its own, no edit needed.
     write("resources.html", layout(
-        "Resources",
-        "Guidance, case studies, research, and templates and tools for building public sauna well.",
-        "resources", body))
+        "Community Sauna Resources and Research | Sauna for All",
+        "Guidance, case studies, research and templates for building community "
+        "sauna well, shared by the operators putting the Charter into practice.",
+        "resources", body, path="/resources", noindex=not RESOURCES))
 
 # ---------------------------------------------------------------------------
 # CONTACT PAGE (SPEC.md Section 6.8)
@@ -1984,9 +2137,52 @@ def page_contact():
   </div>
 </section>'''
     write("contact.html", layout(
-        "Contact",
-        "Get in touch with Sauna for All: questions, media enquiries, regional partnerships, and more.",
-        "contact", body))
+        "Contact Sauna for All | Media and Partnerships",
+        "Questions, media enquiries, regional partnerships, or a community sauna "
+        "resource to share. Email hei@saunaforall.org or use the form.",
+        "contact", body, path="/contact"))
+
+# ---------------------------------------------------------------------------
+# robots.txt and sitemap.xml
+# ---------------------------------------------------------------------------
+# Both are generated from SITE_URL rather than written by hand, so they can
+# never drift from the canonical tags or point at the wrong domain after the
+# cutover. The Resources page is listed only once it holds real content --
+# the same condition that lifts its noindex, kept in one place here.
+SITEMAP_PAGES = [
+    ("/", "1.0"),
+    ("/charter", "0.9"),
+    ("/signatories", "0.9"),
+    ("/about", "0.7"),
+    ("/faqs", "0.7"),
+    ("/news", "0.6"),
+    ("/contact", "0.4"),
+]
+
+def write_robots_and_sitemap():
+    if NOINDEX_WHOLE_SITE:
+        robots = ("# The site is on its preview address; keep it out of search\n"
+                  "# results entirely so it can't compete with the real domain.\n"
+                  "User-agent: *\nDisallow: /\n")
+    else:
+        robots = ("User-agent: *\nAllow: /\n"
+                  + ("" if RESOURCES else "Disallow: /resources\n")
+                  + f"\nSitemap: {SITE_URL}/sitemap.xml\n")
+    write("robots.txt", robots)
+
+    pages = list(SITEMAP_PAGES)
+    if RESOURCES:
+        pages.append(("/resources", "0.6"))
+    today = datetime.date.today().isoformat()
+    urls = "\n".join(
+        f"  <url>\n    <loc>{SITE_URL}{path}</loc>\n"
+        f"    <lastmod>{today}</lastmod>\n"
+        f"    <priority>{priority}</priority>\n  </url>"
+        for path, priority in pages)
+    sitemap = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+               '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+               f"{urls}\n</urlset>\n")
+    write("sitemap.xml", sitemap)
 
 print("Helpers loaded.")
 
@@ -1999,4 +2195,5 @@ if __name__ == "__main__":
     page_news()
     page_resources()
     page_contact()
-    print("Build complete.")
+    write_robots_and_sitemap()
+    print(f"Build complete. Canonical host: {SITE_URL}")
