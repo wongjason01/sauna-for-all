@@ -3,3 +3,10 @@ __pycache__/
 dist/
 pdf/
 content_source/
+
+# Signatory logos are fetched from the form's Drive folder at build time
+# (see fetch_signatory_logos in build.py), so they're build output, not source.
+# Drive stays the single source of truth and nobody has to commit an image
+# when a new signatory signs up. To pin a hand-made override instead, drop the
+# file in and force it past this rule: git add -f images/signatories/<slug>.png
+images/signatories/

@@ -352,7 +352,9 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
   display:grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 24px;
-  padding: clamp(28px,4vw,44px) 0;
+  /* Extra bottom padding so the blue strip has room to breathe before the
+     photo band butts straight up against it (Round 2). */
+  padding: clamp(28px,4vw,44px) 0 clamp(56px,8vw,88px);
 }
 .stat-item{ text-align:center; }
 .stat-item .num{ font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 800; color: var(--green-dark); line-height:1; }
@@ -384,7 +386,9 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 .principle-detail-list{ display:flex; flex-direction:column; gap:0; }
 .principle-detail{
   display:grid;
-  grid-template-columns: 76px minmax(0,1fr);
+  /* Column width tracks the icon size so the absolutely-positioned number
+     badge stays aligned to the circle (Round 2: icons are 20% larger). */
+  grid-template-columns: 91px minmax(0,1fr);
   column-gap: 40px;
   align-items: start;
   padding: 34px 0;
@@ -393,7 +397,7 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 }
 .principle-detail:first-child{ border-top:none; padding-top:10px; }
 .principle-detail-icon{ position:relative; display:flex; justify-content:center; padding-top:2px; }
-.principle-detail-icon .icon-circle{ width:76px; height:76px; }
+.principle-detail-icon .icon-circle{ width:91px; height:91px; }
 .principle-detail-icon .num{
   position:absolute; bottom:-6px; right:0;
   background: var(--green-dark); color: var(--white);
@@ -453,7 +457,7 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 }
 .principle-item:hover{ transform: translateY(-2px); }
 .principle-item:hover .name{ text-decoration: underline; }
-.icon-plain{ width:52px; height:52px; flex-shrink:0; }
+.icon-plain{ width:62px; height:62px; flex-shrink:0; }
 .icon-plain svg{ width:100%; height:100%; }
 .icon-plain img{ width:100%; height:100%; object-fit:contain; }
 .principle-item-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }

@@ -46,7 +46,9 @@ STATIC_ASSETS = [
     "images/photos/sauna-for-all-2026-05.jpg",
     "images/photos/sauna-for-all-2026-13.jpg",
     "images/photos/sauna-for-all-2026-14.jpg",
-    "images/photos/sauna-for-all-home-hero.jpg",
+    "images/photos/sauna-for-all-2026-12.jpg",
+    "images/photos/sauna-for-all-2026-21.jpg",
+    "images/photos/sauna-for-all-2026-23.jpg",
     "images/photos/sauna-for-all-signatories-hero.jpg",
     "files/public-sauna-bathing-charter.pdf",
     "images/headshots/becky-pelkonen.jpg",
@@ -123,6 +125,22 @@ def main():
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         shutil.copyfile(src_path, dest_path)
         print(f"copied dist/{rel_path}")
+
+    # Signatory logos are copied wholesale rather than listed one by one: a new
+    # signatory's logo should ship just by being dropped into the folder, with
+    # no second edit here to forget. Everything in there is referenced by
+    # definition -- build.py only emits a tile for a file it found.
+    logo_dir = os.path.join(ROOT, "images", "signatories")
+    if os.path.isdir(logo_dir):
+        for name in sorted(os.listdir(logo_dir)):
+            src_path = os.path.join(logo_dir, name)
+            if not os.path.isfile(src_path) or name.startswith("."):
+                continue
+            rel_path = f"images/signatories/{name}"
+            dest_path = os.path.join(DIST, rel_path)
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            shutil.copyfile(src_path, dest_path)
+            print(f"copied dist/{rel_path}")
 
     print(f"\nDone. Upload every file/folder in {DIST} to Cloudflare's 'New deployment' page.")
 

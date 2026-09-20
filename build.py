@@ -8,6 +8,7 @@ and writes finished HTML files to the project root.
 import os
 import csv
 import io
+import json
 import re
 import urllib.request
 
@@ -68,7 +69,11 @@ SIGNATORIES_SHEET_CSV_URL = os.environ.get("SIGNATORIES_SHEET_CSV_URL", _DEFAULT
 # (name/org/country/category) with no quote, rather than being dropped or
 # having their answer shown without that specific consent.
 _COL = {"country": "G", "category": "K", "commitment": "T", "consent": "AH",
-        "name": "AJ", "organisation": "AK", "website": "E"}
+        "name": "AJ", "organisation": "AK", "website": "E",
+        # Logo/photo upload added to the form in Sept 2026. The cell holds a
+        # Drive link; the image itself has to be committed under
+        # images/signatories/ (see logo_tile in page_signatories).
+        "logo": "AO"}
 
 _PUBLIC_LISTING_PHRASE = "please list me publicly as a charter signatory"
 _COMMITMENT_SHARE_PHRASE = "you may share my commitments (section 2) publicly"
@@ -175,6 +180,15 @@ def _join_names(names):
     return ", ".join(names[:-1]) + f", and {names[-1]}"
 
 
+def _drive_file_id(cell):
+    """The form's file-upload answer is a Drive link such as
+    https://drive.google.com/open?id=<id>. Returns just the id, or "" if the
+    signatory didn't upload anything."""
+    if not cell:
+        return ""
+    m = re.search(r"[?&]id=([A-Za-z0-9_-]+)", cell) or re.search(r"/d/([A-Za-z0-9_-]+)", cell)
+    return m.group(1) if m else ""
+
 def load_signatories(csv_url, fallback):
     """Loads approved, consented signatory rows from the live Charter
     questionnaire response sheet (see _COL / consent notes above), mapped
@@ -230,6 +244,7 @@ def load_signatories(csv_url, fallback):
             "category": category,
             "commitment": commitment,
             "logo_domain": _domain_of(url),
+            "logo_upload": _drive_file_id(_cell(raw_row, _COL["logo"])),
         })
 
     if unmapped_categories:
@@ -273,10 +288,80 @@ def load_signatories(csv_url, fallback):
             "categories": categories or [],
             "commitment": commitment,
             "logo_domain": _domain_of(url),
+            "logo_upload": next((m.get("logo_upload") for m in members if m.get("logo_upload")), ""),
         })
 
     rows.sort(key=lambda s: (_country_of(s), s["name"].lower()))
     return rows or fallback
+
+# ---------------------------------------------------------------------------
+# Signatory logos uploaded through the form
+# ---------------------------------------------------------------------------
+# The questionnaire's logo question writes its uploads to a dedicated Drive
+# folder (Forms makes one per file-upload question, so this folder holds only
+# logos and headshots -- reference letters live in a separate one). With that
+# folder shared as "anyone with the link can view", new uploads inherit the
+# sharing, and the build can fetch each image with no credentials and no
+# manual step.
+#
+# Fetched at build time rather than linked at page load on purpose: a visitor
+# never depends on Drive being up, and a failed fetch costs one initials badge
+# until the next build instead of a broken image forever.
+SIGNATORY_LOGO_DIR = os.path.join(ROOT, "images", "signatories")
+
+# Drive's thumbnail endpoint returns an already-resized image, which keeps a
+# 1.4MB phone photo from being shipped for an 80px tile and means the build
+# needs no image library. Overridable so the fetch path can be tested against
+# a local server.
+SIGNATORY_LOGO_URL = os.environ.get(
+    "SIGNATORY_LOGO_URL", "https://drive.google.com/thumbnail?id={id}&sz=w320")
+
+_IMAGE_MAGIC = {b"\xff\xd8\xff": "jpg", b"\x89PNG\r\n\x1a\n": "png",
+                b"GIF87a": "gif", b"GIF89a": "gif", b"RIFF": "webp"}
+
+def _image_ext(blob):
+    """The uploaded file's real type, from its leading bytes. Drive hands back
+    an HTML error page rather than an HTTP error when a file isn't readable,
+    so trusting the status code alone would write junk to disk."""
+    for magic, ext in _IMAGE_MAGIC.items():
+        if blob.startswith(magic):
+            return ext
+    return None
+
+def fetch_signatory_logos(signatories):
+    """Downloads each signatory's uploaded logo into images/signatories/.
+
+    A file already sitting there wins and is left alone, so a hand-placed
+    override survives. Returns (fetched, skipped, failed) for the build log.
+    """
+    fetched, skipped, failed = [], [], []
+    for s in signatories:
+        file_id = s.get("logo_upload")
+        if not file_id:
+            continue
+        slug = re.sub(r"[^a-z0-9]+", "-", s["name"].lower()).strip("-")
+        if any(os.path.exists(os.path.join(SIGNATORY_LOGO_DIR, f"{slug}.{e}"))
+               for e in ("png", "jpg", "jpeg", "svg", "webp")):
+            skipped.append(s["name"])
+            continue
+        url = SIGNATORY_LOGO_URL.format(id=file_id)
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "sauna-for-all-build"})
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                blob = resp.read()
+        except Exception as exc:
+            failed.append((s["name"], f"{type(exc).__name__}: {exc}"))
+            continue
+        ext = _image_ext(blob)
+        if not ext:
+            failed.append((s["name"], "not an image -- is the Drive folder shared "
+                                      "as 'anyone with the link can view'?"))
+            continue
+        os.makedirs(SIGNATORY_LOGO_DIR, exist_ok=True)
+        with open(os.path.join(SIGNATORY_LOGO_DIR, f"{slug}.{ext}"), "wb") as f:
+            f.write(blob)
+        fetched.append((s["name"], f"{slug}.{ext}", len(blob)))
+    return fetched, skipped, failed
 
 # ---------------------------------------------------------------------------
 # Logo (curved wordmark, matches style guide lockup)
@@ -614,7 +699,7 @@ def page_home():
     # that next section exactly).
     photo_band = f'''<section style="padding:0;" id="home-photo">
   <div style="position:relative; line-height:0;">
-    <img src="/images/photos/sauna-for-all-home-hero.jpg" alt="Elders bathing together in a traditional Finnish smoke sauna" class="photo-band-img" style="object-fit:cover;">
+    <img src="/images/photos/sauna-for-all-2026-23.jpg" alt="Bathers walking the boardwalk between sauna and water, seen through birch" class="photo-band-img" style="object-fit:cover;">
     {wave_mask("#f7f4e9", edge="bottom")}
   </div>
 </section>'''
@@ -666,13 +751,13 @@ def page_home():
   </div>
 </section>'''
 
-    evidence = f'''<section class="section" id="evidence" style="background:var(--sand); color:var(--dark-green);">
+    evidence = f'''<section class="section" id="evidence" style="background:#ECCEAC; color:var(--dark-green);">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">The evidence</span>
       <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
         <h2 style="margin:0;">The benefits run deep</h2>
-        <img src="/images/icons/thumbs-up.png" alt="" style="width:64px; height:64px; flex-shrink:0;" loading="lazy">
+        <img src="/images/icons/thumbs-up.png" alt="" style="width:77px; height:77px; flex-shrink:0;" loading="lazy">
       </div>
       <p class="lede" style="margin-top:14px;">Sauna supports body, mind, and community. That is why how public sauna grows matters, and why the Charter asks for care in the way it is built and run.</p>
     </div>
@@ -698,7 +783,7 @@ def page_home():
         <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700;">Support the movement &rarr;</a>
       </div>
     </div>
-    <img src="/images/photos/sauna-for-all-2026-13.jpg" alt="Founding stewards and network members among the initial signatories of the Charter" style="border-radius:var(--radius-lg); width:100%; height:100%; object-fit:cover;">
+    <img src="/images/photos/sauna-for-all-2026-13.jpg" alt="Founding stewards and network members among the initial signatories of the Charter" style="width:100%; height:100%; object-fit:cover;">
   </div>
 </section>'''
 
@@ -768,8 +853,11 @@ def page_charter():
 
     principles = f'''<section class="section bg-cream" id="principles">
   <div class="container">
-    <div class="section-head">
-      <h2>Ten shared principles</h2>
+    <div class="two-col" style="align-items:center; margin-bottom:34px;">
+      <div class="section-head" style="margin-bottom:0;">
+        <h2>Ten shared principles</h2>
+      </div>
+      <img src="/images/photos/sauna-for-all-2026-12.jpg" alt="Water poured over cupped hands in a sauna, a moment of care between bathers" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
     </div>
     {"".join(movement(g) for g in PRINCIPLE_GROUPS)}
     <div class="info-card" style="margin-top:20px; padding:32px;">
@@ -795,8 +883,13 @@ def page_charter():
       <h2>Built by, and for, everyone shaping sauna in their communities</h2>
       <p class="lede muted">Anyone working to strengthen public sauna as a common good can sign. You don&rsquo;t need to run a sauna. You simply state what you will do, in your own role, to support the Charter&rsquo;s principles.</p>
     </div>
-    <div style="max-width:60ch;">{who_can_sign_html}</div>
-    <p class="small" style="margin-top:24px; font-weight:700;">Want to join the movement? <a href="#how-signing-works" style="text-decoration:underline;">See how signing works &rarr;</a></p>
+    <div class="two-col" style="align-items:start;">
+      <div>
+        <div style="max-width:60ch;">{who_can_sign_html}</div>
+        <p class="small" style="margin-top:24px; font-weight:700;">Want to join the movement? <a href="#how-signing-works" style="text-decoration:underline;">See how signing works &rarr;</a></p>
+      </div>
+      <img src="/images/photos/sauna-for-all-2026-21.jpg" alt="L&ouml;yly: water poured from a copper ladle over the hot stones of a sauna stove" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
+    </div>
   </div>
 </section>'''
 
@@ -867,6 +960,19 @@ def page_charter():
 _PLACEHOLDER_SIGNATORIES = []
 
 SIGNATORIES = load_signatories(SIGNATORIES_SHEET_CSV_URL, _PLACEHOLDER_SIGNATORIES)
+
+_logos_fetched, _logos_skipped, _logos_failed = fetch_signatory_logos(SIGNATORIES)
+if _logos_fetched:
+    print(f"  fetched {len(_logos_fetched)} signatory logo(s) from Drive:")
+    for name, fn, size in _logos_fetched:
+        print(f"      {name}  ->  images/signatories/{fn}  ({size // 1024} KB)")
+if _logos_skipped:
+    print(f"  {len(_logos_skipped)} signatory logo(s) already on disk, left as-is")
+if _logos_failed:
+    print(f"  ! {len(_logos_failed)} signatory logo(s) could not be fetched "
+          "(those signatories fall back to an initials badge):")
+    for name, why in _logos_failed:
+        print(f"      {name}: {why}")
 SIGNATORY_COUNTRY_COUNT = len({_country_of(s) for s in SIGNATORIES if _country_of(s)})
 
 def page_signatories():
@@ -885,7 +991,7 @@ def page_signatories():
         <a href="/charter" class="btn btn-outline-dark">Read the Charter</a>
       </div>
     </div>
-    <img src="/images/photos/sauna-for-all-signatories-hero.jpg" alt="Signatories celebrating together on a lake dock after a sauna" style="border-radius:var(--radius-lg); width:100%; height:100%; object-fit:cover;">
+    <img src="/images/photos/sauna-for-all-signatories-hero.jpg" alt="Signatories celebrating together on a lake dock after a sauna" style="width:100%; height:100%; object-fit:cover;">
   </div>
 </section>'''
 
@@ -906,7 +1012,7 @@ def page_signatories():
     <div class="two-col">
       <div>
         <h3>Before you begin</h3>
-        <ul class="is-list" style="margin-top:14px;">{before_you_begin_html}</ul>
+        <ul class="is-list list-spaced" style="margin-top:14px;">{before_you_begin_html}</ul>
         <a href="{GOOGLE_FORM_URL}" class="btn btn-solid-orange" target="_blank" rel="noopener" style="margin-top:20px; display:inline-block;">Open the questionnaire</a>
         <p class="small muted" style="margin-top:10px;">Opens in Google Forms.</p>
       </div>
@@ -922,26 +1028,62 @@ def page_signatories():
     def category_pills(cats):
         return "".join(f'<span class="category-pill">{c}</span>' for c in cats)
 
+    def _initials(name):
+        """Badge letters for a signatory name.
+
+        Strips punctuation so a name like "SaunaGlo (and Willamette Sauna
+        Festivaali)" doesn't turn a bracket into a letter, ignores lowercase
+        connectives such as "and", and falls back to the first three
+        characters for single-word names ("Saunthropology" -> SAU).
+        """
+        words = [re.sub(r"[^0-9A-Za-z\u00C0-\u024F]", "", w) for w in re.split(r"\s+", name)]
+        words = [w for w in words if w]
+        significant = [w for w in words if not w.islower()] or words
+        if not significant:
+            return "?"
+        if len(significant) == 1:
+            return significant[0][:3].upper()
+        return "".join(w[0] for w in significant)[:3].upper()
+
+    _missing_logos = []
+
+    def _signatory_slug(name):
+        return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
     def logo_tile(s):
-        domain = s.get("logo_domain", "")
-        if not domain:
-            initials = "".join(w[0] for w in re.split(r"\s+", s["name"]) if w)[:3].upper()
-            return f'<div class="logo-tile" style="width:80px; height:80px; border-radius:50%; border:none; background:var(--light-blue); font-size:0.85rem; font-weight:800; color:var(--green-dark);">{initials}</div>'
-        # Pulled from the signatory's own website via Google's public favicon
-        # service -- no key required. (Clearbit's free public logo API, used
-        # here previously, was retired and now returns 503 for every domain.)
-        # Falls back to the plain initials tile if the domain has no icon on
-        # file or the request fails for any reason.
-        logo_url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
-        # The onerror handler grabs the parent reference into a variable
-        # first: setting textContent on the parent removes the <img> from
-        # the DOM, which would otherwise leave `this.parentElement` null
-        # for the very next statement.
-        return (f'<div class="logo-tile" style="width:80px; height:80px; padding:4px; overflow:hidden;">'
-                f'<img src="{logo_url}" alt="{s["name"]} logo" loading="lazy" '
-                f'style="max-width:100%; max-height:100%; object-fit:contain;" '
-                f'onerror="var p=this.parentElement; p.textContent=&#39;{s["name"][:3].upper()}&#39;; p.style.padding=&#39;8px&#39;;">'
-                f'</div>')
+        """An initials badge for every signatory, with a self-hosted logo file
+        used instead when one exists.
+
+        Round 2: the third-party favicon lookup is gone. It depended on an
+        outside service staying up (Clearbit, used here originally, was retired
+        and started returning 503 for every domain; Google's replacement gave
+        back 16px icons for some domains that looked poor scaled to 80px), and
+        it failed silently -- a missing logo and a dead service looked
+        identical on the page.
+
+        To give a signatory a real logo, drop an image at
+        images/signatories/<slug>.<png|jpg|svg>, where <slug> is their name
+        lowercased with non-alphanumerics turned into hyphens (so "Kamu Sauna"
+        -> kamu-sauna.png), and add it to STATIC_ASSETS in prepare_deploy.py.
+        Nothing is fetched at page load, so a logo can never break later.
+        """
+        slug = _signatory_slug(s["name"])
+        for ext in ("png", "jpg", "jpeg", "svg", "webp"):
+            rel = f"images/signatories/{slug}.{ext}"
+            if os.path.exists(os.path.join(ROOT, rel)):
+                return (f'<div class="logo-tile" style="width:80px; height:80px; padding:4px; overflow:hidden;">'
+                        f'<img src="/{rel}" alt="{s["name"]} logo" loading="lazy" '
+                        f'style="max-width:100%; max-height:100%; object-fit:contain;">'
+                        f'</div>')
+        # Uploaded through the form but not yet committed here. Say so, rather
+        # than silently showing initials -- that silence is exactly what made
+        # the old favicon breakage invisible.
+        if s.get("logo_upload"):
+            _missing_logos.append((s["name"], slug, s["logo_upload"]))
+        initials = _initials(s["name"])
+        return (f'<div class="logo-tile" style="width:80px; height:80px; border-radius:50%; border:none; '
+                f'background:var(--light-blue); font-size:0.85rem; font-weight:800; '
+                f'color:var(--green-dark);">{initials}</div>')
 
     def signatory_card(s):
         cats_attr = "|".join(s["categories"])
@@ -963,6 +1105,30 @@ def page_signatories():
     </div>'''
 
     signatories_html = "".join(signatory_card(s) for s in SIGNATORIES)
+
+    if _missing_logos:
+        print(f"  ! {len(_missing_logos)} signatory logo(s) uploaded to the form but not in "
+              "images/signatories/ -- showing initials for now:")
+        for name, slug, file_id in _missing_logos:
+            print(f"      {name}  ->  images/signatories/{slug}.jpg"
+                  f"   (Drive id {file_id})")
+
+    # Self-hosted signatory logos, handed to js/signatories-feed.js so cards it
+    # renders from the live feed match the ones baked in here. Anything without
+    # a file falls back to the initials badge in both places.
+    _logo_map = {}
+    _logo_dir = os.path.join(ROOT, "images", "signatories")
+    if os.path.isdir(_logo_dir):
+        for fn in sorted(os.listdir(_logo_dir)):
+            stem, dot, ext = fn.rpartition(".")
+            if dot and ext.lower() in ("png", "jpg", "jpeg", "svg", "webp"):
+                _logo_map.setdefault(stem, f"/images/signatories/{fn}")
+    signatory_logos_script = (
+        "<script>window.SIGNATORY_LOGOS = "
+        + json.dumps(_logo_map, ensure_ascii=False)
+        + ";</script>"
+    )
+
     category_chips_html = "".join(
         f'<button type="button" class="filter-chip" data-category="{c}">{c}</button>' for c in SIGNATORY_FILTERS
     )
@@ -1052,7 +1218,7 @@ def page_signatories():
   </div>
 </section>'''
 
-    body = signatories_header + sign + directory + support + regional_partners
+    body = signatories_header + sign + directory + support + regional_partners + signatory_logos_script
     write("signatories.html", layout(
         "Signatories",
         "Sign the Public Sauna-Bathing Charter, see who has already signed, and find out how to support the movement.",
@@ -1100,7 +1266,7 @@ def page_about():
       <p class="lede muted" style="max-width:52ch; margin-top:16px;">Our aim is for public sauna to grow as a trusted part of civic and cultural life, rooted in the common good.</p>
       <a href="#stewards" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the founding stewards &rarr;</a>
     </div>
-    <img src="/images/photos/sauna-for-all-2026-05.jpg" alt="Steve Crosbie and Ian Whelan of F&aacute;d Saoil Saunas, founding stewards of the Public Sauna-Bathing Charter" style="border-radius:var(--radius-lg); width:100%; height:100%; object-fit:cover;">
+    <img src="/images/photos/sauna-for-all-2026-05.jpg" alt="Steve Crosbie and Ian Whelan of F&aacute;d Saoil Saunas, founding stewards of the Public Sauna-Bathing Charter" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
   </div>
 </section>
 
@@ -1141,7 +1307,7 @@ def page_about():
       <a href="/signatories" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the signatories and wider network &rarr;</a>
     </div>
     <div>
-      <img src="/images/photos/sauna-for-all-2026-04.jpg" alt="Sauna networking and community gathering as part of the World Sauna Forum in Jyväskylä, Finland" style="border-radius:var(--radius-lg); width:100%; height:100%; object-fit:cover;">
+      <img src="/images/photos/sauna-for-all-2026-04.jpg" alt="Sauna networking and community gathering as part of the World Sauna Forum in Jyväskylä, Finland" style="width:100%; height:100%; object-fit:cover;">
     </div>
   </div>
 </section>
@@ -1156,12 +1322,12 @@ def page_about():
       <div class="info-card cta-card">
         <h3>Sign the Charter</h3>
         <p>Ready to commit? Signing means sharing how the Charter&rsquo;s principles show up in your work. It takes about 15 to 30 minutes.</p>
-        <a href="/signatories#sign" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Sign the Charter</a>
+        <a href="/signatories#sign" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block; background:#fbec82;">Sign the Charter</a>
       </div>
       <div class="info-card cta-card">
         <h3>Support our work</h3>
         <p>Sauna for All is run by volunteers. Your contribution keeps the Charter, this site, and future gatherings going.</p>
-        <a href="{OPEN_COLLECTIVE_URL}" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block;">Make a donation</a>
+        <a href="{OPEN_COLLECTIVE_URL}" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block; background:#e7c196;">Make a donation</a>
       </div>
     </div>
     <div class="card-grid-2" style="margin-top:24px;">
@@ -1560,14 +1726,17 @@ def page_contact():
   </div>
 </section>
 <section class="section bg-cream" style="padding-top:0;" id="media">
-  <div class="container" style="max-width:640px;">
+  <div class="container">
+   <div style="max-width:640px; margin-top:40px;">
     <h2 style="font-size:1.3rem;">For media</h2>
     <p class="muted" style="margin-top:8px;">Writing about public sauna or the Charter? We&rsquo;re happy to help with background, key facts, logos, photos, and interviews with our founding stewards.</p>
     <p class="small muted" style="margin-top:10px;">Media enquiries: <a href="mailto:{CONTACT_EMAIL}" style="text-decoration:underline; font-weight:700;">{CONTACT_EMAIL}</a></p>
+   </div>
   </div>
 </section>
 <section class="section bg-cream" style="padding-top:0;">
-  <div class="container" style="max-width:640px;">
+  <div class="container">
+   <div style="max-width:640px;">
     <form id="contactForm" novalidate>
       <div class="field-stack">
         <label class="field-label" for="contactName">Name</label>
@@ -1589,6 +1758,7 @@ def page_contact():
       <p class="small muted" id="contactSuccess" style="display:none; margin-top:16px;">Thank you. Your message is on its way, and we&rsquo;ll reply as soon as we can.</p>
     </form>
     <p class="small muted" style="margin-top:20px;">Or email <a href="mailto:{CONTACT_EMAIL}" style="text-decoration:underline; font-weight:700;">{CONTACT_EMAIL}</a></p>
+   </div>
   </div>
 </section>'''
     write("contact.html", layout(

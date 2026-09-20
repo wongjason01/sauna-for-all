@@ -18,21 +18,39 @@ document.addEventListener('DOMContentLoaded', function () {
     return div.innerHTML;
   }
 
+  // Badge letters, matching build.py's _initials: punctuation stripped,
+  // lowercase connectives ignored, single words shortened to three characters.
+  function badgeInitials(name) {
+    var words = name.split(/\s+/)
+      .map(function (w) { return w.replace(/[^0-9A-Za-z\u00C0-\u024F]/g, ''); })
+      .filter(Boolean);
+    var significant = words.filter(function (w) { return w !== w.toLowerCase(); });
+    if (!significant.length) significant = words;
+    if (!significant.length) return '?';
+    if (significant.length === 1) return significant[0].slice(0, 3).toUpperCase();
+    return significant.map(function (w) { return w[0]; }).join('').slice(0, 3).toUpperCase();
+  }
+
+  function slugify(name) {
+    return (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
   function logoTile(s) {
-    var domain = s.logoDomain || '';
-    var initials = (s.name || '').split(/\s+/).filter(Boolean).map(function (w) { return w[0]; }).join('').slice(0, 3).toUpperCase();
-    if (!domain) {
-      return '<div class="logo-tile" style="width:80px; height:80px; border-radius:50%; border:none; background:var(--light-blue); font-size:0.85rem; font-weight:800; color:var(--green-dark);">' + escapeHtml(initials) + '</div>';
+    var initials = badgeInitials(s.name || '');
+    // Round 2: no third-party favicon lookup. Every signatory gets an
+    // initials badge unless we host a logo for them ourselves. build.py
+    // writes the map of self-hosted logos into the page as
+    // window.SIGNATORY_LOGOS, so a card rendered from the live feed matches
+    // one baked in at build time.
+    var logos = window.SIGNATORY_LOGOS || {};
+    var logoPath = logos[slugify(s.name)];
+    if (logoPath) {
+      return '<div class="logo-tile" style="width:80px; height:80px; padding:4px; overflow:hidden;">' +
+        '<img src="' + escapeHtml(logoPath) + '" alt="' + escapeHtml(s.name + ' logo') + '" loading="lazy" ' +
+        'style="max-width:100%; max-height:100%; object-fit:contain;">' +
+        '</div>';
     }
-    // Same public, keyless favicon lookup build.py uses for the build-time
-    // cards, so a signatory added only through the live feed looks
-    // identical to one baked in at build time.
-    var logoUrl = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) + '&sz=128';
-    return '<div class="logo-tile" style="width:80px; height:80px; padding:4px; overflow:hidden;">' +
-      '<img src="' + escapeHtml(logoUrl) + '" alt="' + escapeHtml(s.name + ' logo') + '" loading="lazy" ' +
-      'style="max-width:100%; max-height:100%; object-fit:contain;" ' +
-      'onerror="var p=this.parentElement; p.textContent=\'' + escapeHtml(initials) + '\'; p.style.padding=\'8px\';">' +
-      '</div>';
+    return '<div class="logo-tile" style="width:80px; height:80px; border-radius:50%; border:none; background:var(--light-blue); font-size:0.85rem; font-weight:800; color:var(--green-dark);">' + escapeHtml(initials) + '</div>';
   }
 
   function categoryPills(cats) {
