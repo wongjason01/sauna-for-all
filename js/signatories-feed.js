@@ -53,6 +53,33 @@ document.addEventListener('DOMContentLoaded', function () {
     return '<div class="logo-tile" style="width:80px; height:80px; border-radius:50%; border:none; background:var(--light-blue); font-size:0.85rem; font-weight:800; color:var(--green-dark);">' + escapeHtml(initials) + '</div>';
   }
 
+  // Mirrors _order_key() in build.py -- change both together.
+  function orderKey(name) {
+    return (name || '').toLowerCase().replace(/[^0-9a-zÀ-ɏ]+/g, '');
+  }
+
+  // The feed returns signatories with no sign-up date attached, so it can't
+  // order them itself -- and since this file replaces the whole grid, its
+  // order would otherwise win. build.py works the order out from the
+  // sheet's Timestamp column and leaves it in window.SIGNATORY_ORDER, so
+  // the live refresh reproduces it instead of overriding it. Anyone the
+  // feed knows about who wasn't in the last build has signed since, so they
+  // belong after everyone else -- which is exactly where an unknown name
+  // lands here.
+  function orderBySignupDate(list) {
+    var order = window.SIGNATORY_ORDER;
+    if (!Array.isArray(order) || !order.length) return list;
+    var rank = {};
+    order.forEach(function (key, i) { if (!(key in rank)) rank[key] = i; });
+    return list
+      .map(function (s, i) {
+        var r = rank[orderKey(s.name)];
+        return { s: s, rank: r === undefined ? order.length : r, i: i };
+      })
+      .sort(function (a, b) { return a.rank - b.rank || a.i - b.i; })
+      .map(function (e) { return e.s; });
+  }
+
   function categoryPills(cats) {
     return (cats || []).map(function (c) { return '<span class="category-pill">' + escapeHtml(c) + '</span>'; }).join('');
   }
@@ -87,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       if (grid && Array.isArray(data.signatories)) {
-        grid.innerHTML = data.signatories.map(renderCard).join('');
+        grid.innerHTML = orderBySignupDate(data.signatories).map(renderCard).join('');
         // Re-run the filter/search wiring from main.js now that the grid
         // has an entirely new set of .signatory-card elements -- it reads
         // the DOM fresh each call, so this is safe to call repeatedly.

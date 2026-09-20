@@ -50,6 +50,14 @@ document.addEventListener('DOMContentLoaded', function () {
   // wiring up once, but the card list they filter has to be re-read fresh
   // each time it's called, since a re-run after a live-data refresh has an
   // entirely new set of .signatory-card elements to work with.
+  // Paging state lives out here rather than inside initSignatoryFilters
+  // because the "Show more" button is wired up exactly once, while
+  // initSignatoryFilters runs again every time the live feed swaps the
+  // cards out. If the button closed over a variable from the first run it
+  // would keep paging a set of cards that no longer exists.
+  var signatoryLimit = 0;
+  var signatoryApply = null;
+
   function initSignatoryFilters() {
     var filterWrap = document.getElementById('signatoryFilters');
     var searchInput = document.getElementById('signatorySearch');
@@ -59,6 +67,11 @@ document.addEventListener('DOMContentLoaded', function () {
     var allChip = filterWrap.querySelector('.filter-chip[data-category=""]');
     var catChips = Array.prototype.slice.call(filterWrap.querySelectorAll('.filter-chip[data-category]:not([data-category=""])'));
     var emptyMsg = document.getElementById('signatoryEmpty');
+    var moreBtn = document.getElementById('signatoryShowMore');
+    var pageSize = parseInt(grid.dataset.pageSize, 10) || 12;
+
+    // A fresh set of cards, or a changed filter, starts again from the top.
+    signatoryLimit = pageSize;
 
     function activeCategories() {
       return catChips.filter(function (c) { return c.classList.contains('active'); })
@@ -69,18 +82,29 @@ document.addEventListener('DOMContentLoaded', function () {
       var cats = activeCategories();
       var q = (searchInput && searchInput.value ? searchInput.value : '').trim().toLowerCase();
       var cards = Array.prototype.slice.call(grid.querySelectorAll('.signatory-card'));
-      var visible = 0;
+      var matched = 0;
+      var shown = 0;
       cards.forEach(function (card) {
         var cardCats = (card.dataset.categories || '').split('|');
         var matchesCat = cats.length === 0 || cats.some(function (c) { return cardCats.indexOf(c) !== -1; });
         var haystack = (card.dataset.search || '').toLowerCase();
         var matchesSearch = q === '' || haystack.indexOf(q) !== -1;
         var show = matchesCat && matchesSearch;
-        card.style.display = show ? '' : 'none';
-        if (show) visible++;
+        if (show) matched++;
+        // Cards past the current limit are still matches -- they're just
+        // not on screen yet, so the count in the button stays honest.
+        var onScreen = show && shown < signatoryLimit;
+        if (onScreen) shown++;
+        card.style.display = onScreen ? '' : 'none';
       });
-      if (emptyMsg) emptyMsg.style.display = visible === 0 ? 'block' : 'none';
+      if (emptyMsg) emptyMsg.style.display = matched === 0 ? 'block' : 'none';
+      if (moreBtn) {
+        var remaining = matched - shown;
+        moreBtn.hidden = remaining <= 0;
+        moreBtn.textContent = 'Show ' + Math.min(remaining, pageSize) + ' more';
+      }
     }
+    signatoryApply = applyFilters;
 
     // Re-running this function (after a live-data refresh) would otherwise
     // stack duplicate click/input listeners onto the same chip and search
@@ -93,6 +117,7 @@ document.addEventListener('DOMContentLoaded', function () {
         allChip.addEventListener('click', function () {
           catChips.forEach(function (c) { c.classList.remove('active'); });
           allChip.classList.add('active');
+          signatoryLimit = pageSize;
           applyFilters();
         });
       }
@@ -101,10 +126,34 @@ document.addEventListener('DOMContentLoaded', function () {
           if (allChip) allChip.classList.remove('active');
           chip.classList.toggle('active');
           if (activeCategories().length === 0 && allChip) allChip.classList.add('active');
+          signatoryLimit = pageSize;
           applyFilters();
         });
       });
-      if (searchInput) searchInput.addEventListener('input', applyFilters);
+      if (searchInput) {
+        searchInput.addEventListener('input', function () {
+          signatoryLimit = pageSize;
+          applyFilters();
+        });
+      }
+      if (moreBtn) {
+        moreBtn.addEventListener('click', function () {
+          var before = grid.querySelectorAll('.signatory-card:not([style*="display: none"])').length;
+          signatoryLimit += pageSize;
+          if (signatoryApply) signatoryApply();
+          // Send keyboard and screen-reader users to the first card that
+          // just appeared, rather than leaving focus on a button that may
+          // have vanished.
+          var cards = Array.prototype.slice.call(grid.querySelectorAll('.signatory-card'))
+            .filter(function (c) { return c.style.display !== 'none'; });
+          var next = cards[before];
+          var link = next && next.querySelector('.signatory-name-link');
+          if (link) {
+            if (!link.hasAttribute('tabindex') && link.tagName !== 'A') link.setAttribute('tabindex', '-1');
+            link.focus();
+          }
+        });
+      }
       filterWrap.dataset.filtersWired = '1';
     }
 
