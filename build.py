@@ -151,16 +151,6 @@ def _normalize_url(url):
     return url if re.match(r"^https?://", url, re.I) else f"https://{url}"
 
 
-def _domain_of(url):
-    """Bare domain (no scheme/www/path) for a signatory's website, used to
-    pull their logo from Clearbit's free public logo API. Returns '' if the
-    signatory gave no usable website."""
-    if not url or url == "#":
-        return ""
-    host = re.sub(r"^https?://", "", url, flags=re.I).split("/")[0]
-    host = re.sub(r"^www\.", "", host, flags=re.I)
-    return host.strip().lower()
-
 
 def _country_of(record):
     """Data is stored as 'City, Country' (or just 'Country') -- the stat
@@ -243,7 +233,6 @@ def load_signatories(csv_url, fallback):
             "country": _cell(raw_row, _COL["country"]),
             "category": category,
             "commitment": commitment,
-            "logo_domain": _domain_of(url),
             "logo_upload": _drive_file_id(_cell(raw_row, _COL["logo"])),
         })
 
@@ -287,12 +276,115 @@ def load_signatories(csv_url, fallback):
             "country": first["country"],
             "categories": categories or [],
             "commitment": commitment,
-            "logo_domain": _domain_of(url),
             "logo_upload": next((m.get("logo_upload") for m in members if m.get("logo_upload")), ""),
         })
 
     rows.sort(key=lambda s: (_country_of(s), s["name"].lower()))
     return rows or fallback
+
+# ---------------------------------------------------------------------------
+# Substack posts for the News page
+# ---------------------------------------------------------------------------
+# Fetched and rendered at build time rather than from the browser. Substack's
+# feed sends no CORS headers, so a page-load fetch would need a proxy worker
+# deployed and kept alive; baking the posts in means the News page works with
+# no extra infrastructure, renders without JavaScript, and can't show a broken
+# grid if Substack is slow. New posts appear on the next deploy.
+SUBSTACK_FEED_URL = os.environ.get(
+    "SUBSTACK_FEED_URL", "https://saunaforall.substack.com/feed")
+NEWS_POST_LIMIT = 9
+
+def esc(text):
+    """HTML-escape text coming from outside the repo (Substack titles and
+    excerpts), so a stray & or < in a post title can't break the page."""
+    return (str(text).replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+def _rss_text(item, tag):
+    el = item.find(tag)
+    return (el.text or "").strip() if el is not None and el.text else ""
+
+def _strip_html(markup):
+    """Plain text from a snippet of post HTML.
+
+    Uses html.unescape rather than a hand-written entity list: Substack posts
+    are full of &mdash;, &rsquo; and friends, and missing one leaves the raw
+    entity visible in the excerpt.
+    """
+    import html as _html
+    text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", markup, flags=re.S | re.I)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = _html.unescape(text).replace("\u00a0", " ")
+    return re.sub(r"\s+", " ", text).strip()
+
+def _excerpt(html, limit=165):
+    text = _strip_html(html)
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip(" ,.;:\u2013\u2014-")
+    return cut + "\u2026"
+
+def load_substack_posts(feed_url=SUBSTACK_FEED_URL, limit=NEWS_POST_LIMIT):
+    """Latest posts from the Substack RSS feed, newest first.
+
+    Returns [] on any failure -- an unreachable feed, a parse error, an empty
+    publication -- so the News page falls back to its existing empty state
+    instead of rendering a broken grid.
+    """
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+
+    try:
+        req = urllib.request.Request(feed_url, headers={"User-Agent": "sauna-for-all-build"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            raw = resp.read()
+        root = ET.fromstring(raw)
+    except Exception as exc:
+        print(f"  ! could not fetch Substack feed ({type(exc).__name__}: {exc}); "
+              "News page will show its empty state")
+        return []
+
+    posts = []
+    for item in root.iterfind(".//item"):
+        title = _rss_text(item, "title")
+        link = _rss_text(item, "link")
+        if not (title and link):
+            continue
+
+        # Substack usually gives the cover art as an <enclosure>; when it
+        # doesn't, the first <img> in the post body is the next best thing.
+        image = ""
+        enc = item.find("enclosure")
+        if enc is not None and (enc.get("type") or "").startswith("image/"):
+            image = enc.get("url") or ""
+        body = ""
+        for tag in ("{http://purl.org/rss/1.0/modules/content/}encoded", "description"):
+            el = item.find(tag)
+            if el is not None and el.text:
+                body = el.text
+                break
+        if not image and body:
+            m = re.search(r'<img[^>]+src="([^"]+)"', body)
+            if m:
+                image = m.group(1)
+
+        date_iso, date_label = "", ""
+        raw_date = _rss_text(item, "pubDate")
+        if raw_date:
+            try:
+                dt = parsedate_to_datetime(raw_date)
+                date_iso = dt.date().isoformat()
+                date_label = f"{dt.day} {dt.strftime('%B %Y')}"
+            except Exception:
+                pass
+
+        description = _rss_text(item, "description") or body
+        posts.append({"title": title, "link": link, "image": image,
+                      "date_iso": date_iso, "date_label": date_label,
+                      "summary": _excerpt(description)})
+        if len(posts) >= limit:
+            break
+    return posts
 
 # ---------------------------------------------------------------------------
 # Signatory logos uploaded through the form
@@ -425,7 +517,10 @@ def icon(name, css_class="ic-tan"):
 GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf425hWeCCmQFa1IF_nrGu9ihbM8rB3MAqawdu-3lPVfFCtgg/viewform?usp=header"
 OPEN_COLLECTIVE_URL = "https://opencollective.com/sauna_for_all"
 SUBSTACK_URL = "https://saunaforall.substack.com"
-SUBSTACK_FEED_URL = ""  # [ADD SUBSTACK LINK]/feed -- SPEC.md Section 4
+# Every "Sign up" button goes straight to the subscribe form rather than the
+# publication front page, so the call to action lands on the thing it asks
+# for. The footer's "Newsletter" nav link still points at the publication.
+SUBSTACK_SUBSCRIBE_URL = "https://saunaforall.substack.com/subscribe"
 
 # Worker that proxies the live signatories Google Sheet as JSON, so the
 # directory and the homepage tally update without a rebuild.
@@ -477,6 +572,28 @@ def nav(active):
   </div>
 </header>'''
 
+# ---------------------------------------------------------------------------
+# Social links (footer)
+# ---------------------------------------------------------------------------
+# Inline SVG rather than an icon font or a third-party script: three glyphs
+# don't justify another network dependency, and the site has already been
+# bitten twice by outside services disappearing.
+SOCIAL_LINKS = [
+    ("Instagram", "https://www.instagram.com/sauna_for_all/",
+     '<path d="M12 2.2c3.2 0 3.6 0 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.25.07 1.65.07 4.85s0 3.6-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.25.06-1.65.07-4.85.07s-3.6 0-4.85-.07c-1.17-.05-1.8-.25-2.23-.41a3.8 3.8 0 0 1-1.38-.9 3.8 3.8 0 0 1-.9-1.38c-.16-.42-.36-1.06-.41-2.23C2.21 15.6 2.2 15.2 2.2 12s0-3.6.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.44 2.21 8.84 2.2 12 2.2Zm0 1.8c-3.14 0-3.5.01-4.74.07-.9.04-1.38.19-1.7.31-.43.17-.73.37-1.05.69-.32.32-.52.62-.69 1.05-.12.32-.27.8-.31 1.7C3.45 8.5 3.44 8.86 3.44 12s.01 3.5.07 4.74c.4.9.19 1.38.31 1.7.17.43.37.73.69 1.05.32.32.62.52 1.05.69.32.12.8.27 1.7.31 1.24.06 1.6.07 4.74.07s3.5-.01 4.74-.07c.9-.04 1.38-.19 1.7-.31.43-.17.73-.37 1.05-.69.32-.32.52-.62.69-1.05.12-.32.27-.8.31-1.7.06-1.24.07-1.6.07-4.74s-.01-3.5-.07-4.74c-.04-.9-.19-1.38-.31-1.7a2.8 2.8 0 0 0-.69-1.05 2.8 2.8 0 0 0-1.05-.69c-.32-.12-.8-.27-1.7-.31C15.5 4.01 15.14 4 12 4Zm0 3.06a4.94 4.94 0 1 1 0 9.88 4.94 4.94 0 0 1 0-9.88Zm0 1.8a3.14 3.14 0 1 0 0 6.28 3.14 3.14 0 0 0 0-6.28Zm5.14-.72a1.15 1.15 0 1 1 0-2.3 1.15 1.15 0 0 1 0 2.3Z"/>'),
+    ("LinkedIn", "https://www.linkedin.com/company/sauna-for-all/",
+     '<path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9.25h4v11.5H3V9.25Zm6.5 0h3.83v1.57h.06c.53-.95 1.84-1.95 3.78-1.95 4.04 0 4.79 2.5 4.79 5.76v6.12h-4v-5.43c0-1.3-.03-2.96-1.9-2.96-1.9 0-2.19 1.4-2.19 2.86v5.53h-4V9.25Z"/>'),
+    ("Substack", "https://saunaforall.substack.com/",
+     '<path d="M3.5 3.5h17v2.6h-17V3.5Zm0 4.55h17V10h-17V8.05Zm0 4.06L12 16.2l8.5-4.09V21L12 17.2 3.5 21v-8.89Z"/>'),
+]
+
+def social_icons_html():
+    links = "".join(
+        f'<a href="{url}" target="_blank" rel="noopener" aria-label="Sauna for All on {name}" title="{name}">'
+        f'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">{path}</svg></a>'
+        for name, url, path in SOCIAL_LINKS)
+    return f'<div class="social-links">{links}</div>'
+
 def footer():
     return f'''<footer class="site-footer">
   <div class="container">
@@ -484,6 +601,7 @@ def footer():
       <div class="footer-col" style="max-width:340px;">
         <a href="/" aria-label="Sauna for All, home"><img src="/images/logo/sauna-for-all-orange.png" alt="" style="height:36px; width:auto;"></a>
         <p class="small" style="margin-top:16px; opacity:0.75;">Public Sauna. Common Good.</p>
+        {social_icons_html()}
       </div>
       <div class="footer-links">
         <div class="footer-col">
@@ -737,7 +855,7 @@ def page_home():
   </div>
 </section>'''
 
-    why_now = f'''<section class="section bg-white" id="why-now" style="background:#fbec82;">
+    why_now = f'''<section class="section bg-white" id="why-now" style="background:#FDF4B0;">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Why now</span>
@@ -751,13 +869,13 @@ def page_home():
   </div>
 </section>'''
 
-    evidence = f'''<section class="section" id="evidence" style="background:#ECCEAC; color:var(--dark-green);">
+    evidence = f'''<section class="section" id="evidence" style="background:#F0D8BC; color:var(--dark-green);">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">The evidence</span>
       <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
         <h2 style="margin:0;">The benefits run deep</h2>
-        <img src="/images/icons/thumbs-up.png" alt="" style="width:77px; height:77px; flex-shrink:0;" loading="lazy">
+        <img src="/images/icons/thumbs-up.png" alt="" style="width:92px; height:92px; flex-shrink:0;" loading="lazy">
       </div>
       <p class="lede" style="margin-top:14px;">Sauna supports body, mind, and community. That is why how public sauna grows matters, and why the Charter asks for care in the way it is built and run.</p>
     </div>
@@ -791,7 +909,7 @@ def page_home():
   <div class="container" style="max-width:720px; text-align:center;">
     <h2>Stay close on the bench</h2>
     <p class="lede muted" style="margin-top:14px;">Follow the Charter as it grows, learn from operators and researchers, and get invitations to online meet-ups. You&rsquo;ll also hear first when we open new rounds for signatories.</p>
-    <a href="{SUBSTACK_URL or '#'}" class="btn btn-solid-orange" style="margin-top:22px; display:inline-block;">Sign up</a>
+    <a href="{SUBSTACK_SUBSCRIBE_URL}" class="btn btn-solid-orange" style="margin-top:22px; display:inline-block;">Sign up</a>
   </div>
 </section>'''
 
@@ -812,7 +930,8 @@ CHARTER_DRIVE_FOLDER_URL = "https://drive.google.com/drive/folders/1xpRWK0kG0gFh
 
 def page_charter():
     charter_header = f'''<section class="section bg-cream" style="padding-bottom:0;" id="charter-header">
-  <div class="container">
+  <div class="container two-col" style="align-items:center;">
+   <div>
     <span class="eyebrow" style="color:var(--gold);">The Public Sauna-Bathing Charter</span>
     <h1 style="font-size:clamp(2rem,4vw,2.9rem); margin:14px 0 20px; max-width:22ch;">Ten principles for public sauna as common good</h1>
     <p class="lede muted" style="max-width:64ch;">The Charter sets out shared principles for developing and caring for public sauna responsibly. It gives communities, operators, governments, funders, and researchers a common reference point. Signatories commit to showing how these principles guide their decisions and daily practice.</p>
@@ -825,6 +944,8 @@ def page_charter():
       <a href="/faqs" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Read the FAQs &rarr;</a>
       <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Support our work &rarr;</a>
     </div>
+   </div>
+   <img src="/images/photos/sauna-for-all-2026-12.jpg" alt="Water poured over cupped hands in a sauna, a moment of care between bathers" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
   </div>
 </section>'''
 
@@ -853,17 +974,14 @@ def page_charter():
 
     principles = f'''<section class="section bg-cream" id="principles">
   <div class="container">
-    <div class="two-col" style="align-items:center; margin-bottom:34px;">
-      <div class="section-head" style="margin-bottom:0;">
-        <h2>Ten shared principles</h2>
-      </div>
-      <img src="/images/photos/sauna-for-all-2026-12.jpg" alt="Water poured over cupped hands in a sauna, a moment of care between bathers" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
+    <div class="section-head">
+      <h2>Ten shared principles</h2>
     </div>
     {"".join(movement(g) for g in PRINCIPLE_GROUPS)}
     <div class="info-card" style="margin-top:20px; padding:32px;">
       <h3 style="font-size:1.15rem;">Putting the principles into practice</h3>
       <p class="muted" style="margin:10px 0 18px;">Sign up for news to receive practical guidance on applying each principle, along with case studies, resources, and invitations to online meet-ups with operators and communities doing this work.</p>
-      <a href="{SUBSTACK_URL or '#'}" class="btn btn-solid-orange" style="display:inline-block;">Sign up</a>
+      <a href="{SUBSTACK_SUBSCRIBE_URL}" class="btn btn-solid-orange" style="display:inline-block;">Sign up</a>
     </div>
   </div>
 </section>'''
@@ -877,19 +995,17 @@ def page_charter():
         f'<p style="margin-top:14px;"><strong>{title}.</strong> {body}</p>' for title, body in WHO_CAN_SIGN_GROUPS)
 
     who_can_sign = f'''<section class="section" id="who-can-sign" style="background:var(--light-blue); color:var(--green-dark);">
-  <div class="container">
-    <div class="section-head">
-      <span class="eyebrow">Who can sign</span>
-      <h2>Built by, and for, everyone shaping sauna in their communities</h2>
-      <p class="lede muted">Anyone working to strengthen public sauna as a common good can sign. You don&rsquo;t need to run a sauna. You simply state what you will do, in your own role, to support the Charter&rsquo;s principles.</p>
-    </div>
-    <div class="two-col" style="align-items:start;">
-      <div>
-        <div style="max-width:60ch;">{who_can_sign_html}</div>
-        <p class="small" style="margin-top:24px; font-weight:700;">Want to join the movement? <a href="#how-signing-works" style="text-decoration:underline;">See how signing works &rarr;</a></p>
+  <div class="container two-col" style="align-items:center;">
+    <div>
+      <div class="section-head">
+        <span class="eyebrow">Who can sign</span>
+        <h2>Built by, and for, everyone shaping sauna in their communities</h2>
+        <p class="lede muted">Anyone working to strengthen public sauna as a common good can sign. You don&rsquo;t need to run a sauna. You simply state what you will do, in your own role, to support the Charter&rsquo;s principles.</p>
       </div>
-      <img src="/images/photos/sauna-for-all-2026-21.jpg" alt="L&ouml;yly: water poured from a copper ladle over the hot stones of a sauna stove" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
+      {who_can_sign_html}
+      <p class="small" style="margin-top:24px; font-weight:700;">Want to join the movement? <a href="#how-signing-works" style="text-decoration:underline;">See how signing works &rarr;</a></p>
     </div>
+    <img src="/images/photos/sauna-for-all-2026-21.jpg" alt="L&ouml;yly: water poured from a copper ladle over the hot stones of a sauna stove" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
   </div>
 </section>'''
 
@@ -1002,7 +1118,7 @@ def page_signatories():
     ]
     before_you_begin_html = "".join(f'<li><span>{item}</span></li>' for item in BEFORE_YOU_BEGIN)
 
-    sign = f'''<section class="section" id="sign" style="background:#fbec82;">
+    sign = f'''<section class="section" id="sign" style="background:#FDF4B0;">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">Sign the Charter</span>
@@ -1054,18 +1170,17 @@ def page_signatories():
         """An initials badge for every signatory, with a self-hosted logo file
         used instead when one exists.
 
-        Round 2: the third-party favicon lookup is gone. It depended on an
-        outside service staying up (Clearbit, used here originally, was retired
-        and started returning 503 for every domain; Google's replacement gave
-        back 16px icons for some domains that looked poor scaled to 80px), and
-        it failed silently -- a missing logo and a dead service looked
-        identical on the page.
+        Two sources, in order: the image the signatory uploaded through the
+        form (fetched from Drive at build time by fetch_signatory_logos and
+        written to images/signatories/<slug>.<ext>), then an initials badge.
 
-        To give a signatory a real logo, drop an image at
-        images/signatories/<slug>.<png|jpg|svg>, where <slug> is their name
-        lowercased with non-alphanumerics turned into hyphens (so "Kamu Sauna"
-        -> kamu-sauna.png), and add it to STATIC_ASSETS in prepare_deploy.py.
-        Nothing is fetched at page load, so a logo can never break later.
+        There is deliberately no third source. Logos were once looked up from
+        a favicon service keyed on the signatory's domain, which broke twice --
+        Clearbit was retired and began returning 503 for every domain, and
+        Google's replacement served 16px icons for some sites that looked poor
+        scaled to 80px. Worse, both failed silently: a signatory with no logo
+        and a dead service rendered identically, so nobody noticed. Nothing is
+        fetched at page load now, so a tile can't break after it ships.
         """
         slug = _signatory_slug(s["name"])
         for ext in ("png", "jpg", "jpeg", "svg", "webp"):
@@ -1334,7 +1449,7 @@ def page_about():
       <div>
         <h3>Stay close on the bench</h3>
         <p class="small muted" style="margin-top:8px;">News, stories, and invitations to online meet-ups.</p>
-        <a href="{SUBSTACK_URL or '#'}" style="display:inline-block; margin-top:10px; text-decoration:underline; font-weight:700;">Sign up &rarr;</a>
+        <a href="{SUBSTACK_SUBSCRIBE_URL}" style="display:inline-block; margin-top:10px; text-decoration:underline; font-weight:700;">Sign up &rarr;</a>
       </div>
       <div>
         <h3>Contact us</h3>
@@ -1606,10 +1721,41 @@ def page_news():
   </div>
 </section>'''
 
+    posts = load_substack_posts()
+
+    def news_card(post):
+        # If the image 404s or the CDN link has expired, swap in the branded
+        # placeholder rather than leaving a broken 16:10 hole in the card.
+        # (Grab the parent first: replacing the markup detaches this <img>.)
+        fallback = ("var p=this.parentElement;"
+                    "p.insertAdjacentHTML('afterbegin',"
+                    "'&lt;div class=\\'placeholder-img\\'&gt;&lt;span&gt;Sauna for All&lt;/span&gt;&lt;/div&gt;');"
+                    "this.remove();")
+        cover = (f'<img class="cover" src="{esc(post["image"])}" alt="" loading="lazy" onerror="{fallback}">'
+                 if post["image"]
+                 else '<div class="placeholder-img"><span>Sauna for All</span></div>')
+        date_html = (f'<div class="meta"><time datetime="{post["date_iso"]}">{post["date_label"]}</time></div>'
+                     if post["date_label"] else "")
+        summary_html = (f'<p class="small muted">{esc(post["summary"])}</p>'
+                        if post["summary"] else "")
+        return f'''<a class="news-card" href="{post["link"]}" target="_blank" rel="noopener">
+      {cover}
+      <div class="news-card-body">
+        <h3>{esc(post["title"])}</h3>
+        {date_html}
+        {summary_html}
+        <span class="news-card-more">Read more &rarr;</span>
+      </div>
+    </a>'''
+
+    cards_html = "".join(news_card(p) for p in posts)
+    # The empty state only shows when there is genuinely nothing to show.
+    empty_style = "display:none;" if posts else ""
+
     updates = f'''<section class="section bg-cream" id="updates">
   <div class="container">
-    <div class="card-grid" id="newsGrid" data-feed-endpoint="{NEWS_FEED_ENDPOINT}"></div>
-    <p class="lede muted" id="newsEmpty" style="text-align:center; padding:20px 0;">News is on its way. Sign up to hear first.</p>
+    <div class="card-grid" id="newsGrid" data-feed-endpoint="{NEWS_FEED_ENDPOINT}">{cards_html}</div>
+    <p class="lede muted" id="newsEmpty" style="text-align:center; padding:20px 0; {empty_style}">News is on its way. Sign up to hear first.</p>
     <div style="text-align:center; margin-top:10px;">
       <button type="button" id="newsLoadMore" class="btn btn-outline-dark" style="display:none;">Load more</button>
     </div>
@@ -1619,7 +1765,7 @@ def page_news():
     news_newsletter = f'''<section class="section bg-white" id="news-newsletter">
   <div class="container" style="max-width:640px; text-align:center;">
     <p class="lede"><strong>Stay close on the bench.</strong> Get updates like these in your inbox.</p>
-    <a href="{SUBSTACK_URL or '#'}" class="btn btn-solid-orange" style="margin-top:14px; display:inline-block;">Sign up</a>
+    <a href="{SUBSTACK_SUBSCRIBE_URL}" class="btn btn-solid-orange" style="margin-top:14px; display:inline-block;">Sign up</a>
   </div>
 </section>'''
 
@@ -1692,7 +1838,7 @@ def page_resources():
     <div class="card-grid-4">{categories_html}</div>
     <div class="info-card" style="margin-top:28px;">
       <p style="margin-bottom:14px;">Resources coming soon. Sign up for news to hear when they&rsquo;re ready.</p>
-      <a href="{SUBSTACK_URL or '#'}" class="btn btn-solid-orange" style="display:inline-block;">Sign up</a>
+      <a href="{SUBSTACK_SUBSCRIBE_URL}" class="btn btn-solid-orange" style="display:inline-block;">Sign up</a>
     </div>
     <p class="small muted" style="margin-top:20px;">Have a resource to share? Want to collaborate on a case study? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch &rarr;</a></p>
   </div>

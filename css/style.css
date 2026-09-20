@@ -457,7 +457,7 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 }
 .principle-item:hover{ transform: translateY(-2px); }
 .principle-item:hover .name{ text-decoration: underline; }
-.icon-plain{ width:62px; height:62px; flex-shrink:0; }
+.icon-plain{ width:74px; height:74px; flex-shrink:0; }
 .icon-plain svg{ width:100%; height:100%; }
 .icon-plain img{ width:100%; height:100%; object-fit:contain; }
 .principle-item-text{ display:flex; flex-direction:column; gap:2px; min-width:0; }
@@ -752,7 +752,18 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 .faq-item .faq-answer li:last-child{ margin-bottom:0; }
 
 /* ---------- News cards ---------- */
-.news-card{ background: var(--white); border:1px solid rgba(15,77,59,0.12); border-radius: var(--radius-md); overflow:hidden; }
+.news-card{
+  background: var(--white); border:1px solid rgba(15,77,59,0.12);
+  border-radius: var(--radius-md); overflow:hidden;
+  display:flex; flex-direction:column; color:inherit; text-decoration:none;
+  transition: border-color .15s ease, transform .15s ease;
+}
+/* The whole card is the link, so give it a visible hover and focus state. */
+.news-card:hover{ border-color: rgba(15,77,59,0.35); transform: translateY(-2px); }
+.news-card:focus-visible{ outline:3px solid var(--orange); outline-offset:2px; }
+.news-card-body{ display:flex; flex-direction:column; flex:1 0 auto; }
+.news-card-more{ margin-top:auto; padding-top:12px; font-weight:700; text-decoration:underline; font-size:0.9rem; }
+@media (prefers-reduced-motion: reduce){ .news-card{ transition:none; } .news-card:hover{ transform:none; } }
 .news-card .placeholder-img{ border-radius:0; aspect-ratio: 16/10; }
 .news-card .cover{ display:block; width:100%; aspect-ratio:16/10; object-fit:cover; }
 .news-card-body{ padding: 20px; }
@@ -782,6 +793,19 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 .footer-col h4{ font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; color: var(--tan); margin-bottom:14px; }
 .footer-col a{ display:block; font-size:0.92rem; opacity:0.85; margin-bottom:10px; }
 .footer-col a:hover{ opacity:1; text-decoration:underline; }
+
+/* Social icons (footer). Sized to a 44px touch target so they're comfortable
+   on a phone, with the glyph itself smaller inside. */
+.social-links{ display:flex; gap:6px; margin-top:18px; margin-left:-10px; }
+.social-links a{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:44px; height:44px; border-radius:50%;
+  color: var(--cream); opacity:0.8; margin:0;
+  transition: opacity var(--transition), background var(--transition);
+}
+.social-links a:hover{ opacity:1; background: rgba(255,255,255,0.10); text-decoration:none; }
+.social-links a:focus-visible{ outline:3px solid var(--orange); outline-offset:2px; }
+.social-links svg{ width:22px; height:22px; fill: currentColor; }
 .footer-bottom{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.12); font-size:0.82rem; opacity:0.7; }
 
 /* ---------- Utility ---------- */

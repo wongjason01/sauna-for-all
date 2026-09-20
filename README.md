@@ -32,6 +32,23 @@ fallback for when the sheet can't be reached — so a build never publishes an
 empty directory. The directory and homepage tally also refresh at runtime
 from a feed worker, so new signatories appear without a rebuild.
 
+## News
+
+The News page is built from the Substack RSS feed
+(`saunaforall.substack.com/feed`) at build time: each post becomes a card with
+its cover image, title, date and an excerpt, linking to the post on Substack.
+The grid is three columns on desktop, two on tablet, one on mobile.
+
+Fetched during the build rather than from the browser, because Substack's feed
+sends no CORS headers — a page-load fetch would need a proxy worker deployed
+and kept running. Baking the posts in means no extra infrastructure, the page
+works without JavaScript, and a slow Substack can't leave a half-rendered grid.
+The trade-off is that new posts appear on the next deploy rather than instantly.
+
+If the feed can't be reached the build says so and the page falls back to its
+"News is on its way" message, and if a post's cover image fails to load the card
+shows the branded placeholder instead of a gap.
+
 ## Signatory logos
 
 The questionnaire's logo question ("upload your organisation's logo, or a

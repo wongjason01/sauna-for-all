@@ -58,7 +58,11 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(function (r) { return r.json(); })
     .then(function (data) {
       posts = (data && data.posts) || [];
-      if (posts.length === 0) return; // empty state stays visible
+      if (posts.length === 0) return; // build-time cards stay as they are
+      // Cards are rendered at build time too, so clear them first rather than
+      // appending a second copy of every post.
+      grid.innerHTML = '';
+      shown = 0;
       if (emptyMsg) emptyMsg.style.display = 'none';
       showMore();
     })
