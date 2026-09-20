@@ -7,6 +7,7 @@ and writes finished HTML files to the project root.
 """
 import os
 import csv
+import datetime
 import io
 import json
 import re
@@ -68,8 +69,8 @@ SIGNATORIES_SHEET_CSV_URL = os.environ.get("SIGNATORIES_SHEET_CSV_URL", _DEFAULT
 # be listed but not to have their commitment text published still shows up
 # (name/org/country/category) with no quote, rather than being dropped or
 # having their answer shown without that specific consent.
-_COL = {"country": "G", "category": "K", "commitment": "T", "consent": "AH",
-        "name": "AJ", "organisation": "AK", "website": "E",
+_COL = {"timestamp": "A", "country": "G", "category": "K", "commitment": "T",
+        "consent": "AH", "name": "AJ", "organisation": "AK", "website": "E",
         # Logo/photo upload added to the form in Sept 2026. The cell holds a
         # Drive link; the image itself has to be committed under
         # images/signatories/ (see logo_tile in page_signatories).
@@ -179,6 +180,35 @@ def _drive_file_id(cell):
     m = re.search(r"[?&]id=([A-Za-z0-9_-]+)", cell) or re.search(r"/d/([A-Za-z0-9_-]+)", cell)
     return m.group(1) if m else ""
 
+def _order_key(name):
+    """Normalised name used to line a feed entry up with the build's
+    ordering. Case and punctuation are dropped because the feed Worker and
+    the sheet don't always agree on them ("humanswhobathe" vs "Humans Who
+    Bathe"). Mirrored by orderKey() in js/signatories-feed.js -- change
+    both together."""
+    return re.sub(r"[^0-9a-zÀ-ɏ]+", "", (name or "").lower())
+
+_TIMESTAMP_FORMATS = (
+    "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M",
+    "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M:%S",
+)
+
+def _signed_at(cell):
+    """Parses the form's Timestamp column (sheet column A) into something
+    sortable. Google writes it in the sheet owner's locale, so several
+    shapes are tried. Returns None when it can't be read -- callers fall
+    back to the row's position in the sheet, which is already submission
+    order, so an unparseable timestamp can never scramble the directory."""
+    cell = (cell or "").strip()
+    if not cell:
+        return None
+    for fmt in _TIMESTAMP_FORMATS:
+        try:
+            return datetime.datetime.strptime(cell, fmt)
+        except ValueError:
+            continue
+    return None
+
 def load_signatories(csv_url, fallback):
     """Loads approved, consented signatory rows from the live Charter
     questionnaire response sheet (see _COL / consent notes above), mapped
@@ -227,6 +257,8 @@ def load_signatories(csv_url, fallback):
         organisation = _cell(raw_row, _COL["organisation"])
 
         people_rows.append({
+            "signed_at": _signed_at(_cell(raw_row, _COL["timestamp"])),
+            "row_index": len(people_rows),
             "person_name": person_name,
             "organisation": organisation,
             "url": url,
@@ -269,7 +301,14 @@ def load_signatories(csv_url, fallback):
                 categories.append(m["category"])
         commitment = next((m["commitment"] for m in members if m["commitment"]), "")
         url = next((m["url"] for m in members if m["url"] and m["url"] != "#"), first["url"])
+        # An organisation's place in the directory is set by whoever signed
+        # for it first, not by whichever of its people the sheet happens to
+        # list first -- so adding a second signatory to an existing
+        # organisation never moves that card.
+        earliest = min((m["signed_at"] for m in members if m["signed_at"]), default=None)
         rows.append({
+            "signed_at": earliest,
+            "row_index": min(m["row_index"] for m in members),
             "name": organisation or people_names,
             "signed_by": f"Signed by {people_names}" if organisation else "",
             "url": url,
@@ -279,7 +318,23 @@ def load_signatories(csv_url, fallback):
             "logo_upload": next((m.get("logo_upload") for m in members if m.get("logo_upload")), ""),
         })
 
-    rows.sort(key=lambda s: (_country_of(s), s["name"].lower()))
+    # Ordered by when each signatory actually signed, earliest first, so the
+    # directory reads as a lineage: founding signatories at the top, newest
+    # arrivals at the bottom. Rows whose Timestamp cell couldn't be parsed
+    # (and the committed snapshot, where that column is blank) keep their
+    # position in the sheet, which is submission order already.
+    # `rows` is still in sheet order here, so an undated row can borrow the
+    # timestamp of the last dated row above it -- that keeps it among the
+    # neighbours it was submitted between, rather than being flung to one
+    # end of the directory.
+    carried = datetime.datetime.min
+    for r in rows:
+        if r["signed_at"]:
+            carried = r["signed_at"]
+        r["_sort_at"] = r["signed_at"] or carried
+    rows.sort(key=lambda s: (s["_sort_at"], s["row_index"]))
+    for r in rows:
+        del r["_sort_at"]
     return rows or fallback
 
 # ---------------------------------------------------------------------------
@@ -525,6 +580,10 @@ SUBSTACK_SUBSCRIBE_URL = "https://saunaforall.substack.com/subscribe"
 # Worker that proxies the live signatories Google Sheet as JSON, so the
 # directory and the homepage tally update without a rebuild.
 SIGNATORIES_FEED_ENDPOINT = "https://sauna-for-all-signatories-feed.tiny-block-645d.workers.dev"
+
+# How many signatory cards the directory shows before the "Show more" button.
+# Read by js/main.js off the grid, so this is the single place to change it.
+SIGNATORY_PAGE_SIZE = 12
 CONTACT_EMAIL = "hei@saunaforall.org"
 
 NAV_ITEMS = [
@@ -1238,6 +1297,19 @@ def page_signatories():
             stem, dot, ext = fn.rpartition(".")
             if dot and ext.lower() in ("png", "jpg", "jpeg", "svg", "webp"):
                 _logo_map.setdefault(stem, f"/images/signatories/{fn}")
+    # The live feed Worker returns signatories with no sign-up date on them,
+    # so it cannot order them itself -- and because js/signatories-feed.js
+    # replaces the whole grid, whatever order it returns would otherwise
+    # override the one built here. So the build hands over the order it
+    # worked out from the sheet's Timestamp column, as a list of normalised
+    # names. Anyone the feed knows about who wasn't in this build is new by
+    # definition, and sorts to the end, which is where "earliest first" puts
+    # them anyway.
+    signatory_order_script = (
+        "<script>window.SIGNATORY_ORDER = "
+        + json.dumps([_order_key(s["name"]) for s in SIGNATORIES], ensure_ascii=False)
+        + ";</script>"
+    )
     signatory_logos_script = (
         "<script>window.SIGNATORY_LOGOS = "
         + json.dumps(_logo_map, ensure_ascii=False)
@@ -1258,8 +1330,11 @@ def page_signatories():
       </div>
       <input type="search" id="signatorySearch" class="filter-search" placeholder="Search by name or country&hellip;" aria-label="Search signatories">
     </div>
-    <div class="signatories-grid" id="signatoriesGrid" data-feed-endpoint="{SIGNATORIES_FEED_ENDPOINT}">{signatories_html}</div>
-    <p class="filter-empty" id="signatoryEmpty">{empty_message}</p>'''
+    <div class="signatories-grid" id="signatoriesGrid" data-feed-endpoint="{SIGNATORIES_FEED_ENDPOINT}" data-page-size="{SIGNATORY_PAGE_SIZE}">{signatories_html}</div>
+    <p class="filter-empty" id="signatoryEmpty">{empty_message}</p>
+    <div class="signatories-more">
+      <button type="button" class="btn btn-outline-dark" id="signatoryShowMore" hidden>Show more</button>
+    </div>'''
     else:
         list_html = '<p class="lede muted">Our first signatories will appear here soon.</p>'
 
@@ -1333,7 +1408,8 @@ def page_signatories():
   </div>
 </section>'''
 
-    body = signatories_header + sign + directory + support + regional_partners + signatory_logos_script
+    body = (signatories_header + sign + directory + support + regional_partners
+            + signatory_order_script + signatory_logos_script)
     write("signatories.html", layout(
         "Signatories",
         "Sign the Public Sauna-Bathing Charter, see who has already signed, and find out how to support the movement.",

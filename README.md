@@ -49,6 +49,26 @@ If the feed can't be reached the build says so and the page falls back to its
 "News is on its way" message, and if a post's cover image fails to load the card
 shows the branded placeholder instead of a gap.
 
+## Signatory order and paging
+
+The directory is ordered by when each signatory actually signed — earliest
+first, read from the response sheet's Timestamp column (A). An organisation
+takes the date of whoever signed for it first, so adding a second person to an
+existing organisation never moves its card. Twelve cards show at a time behind
+a "Show more" button (`SIGNATORY_PAGE_SIZE` in `build.py`); filtering or
+searching starts the count again from the top, so the button always reflects
+the set actually being looked at.
+
+The live feed Worker returns signatories with no date attached, and
+`js/signatories-feed.js` replaces the whole grid — so left alone, the feed's
+order would override the build's. Instead the build writes the order it worked
+out into `window.SIGNATORY_ORDER` as normalised names, and the feed refresh
+sorts itself into that order. Anyone the feed knows about who wasn't in the
+last build has signed since, so they sort to the end, which is where earliest-
+first puts them anyway. Names are matched with case and punctuation stripped,
+because the sheet and the feed don't always agree on them — `_order_key()` in
+`build.py` and `orderKey()` in the feed script have to stay in step.
+
 ## Signatory logos
 
 The questionnaire's logo question ("upload your organisation's logo, or a
