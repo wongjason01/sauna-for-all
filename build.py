@@ -586,10 +586,10 @@ SUBSTACK_SUBSCRIBE_URL = "https://saunaforall.substack.com/subscribe"
 # absolute URLs from this one value, so moving to the real domain is a
 # one-line change rather than a hunt through eight pages.
 #
-# AT CUTOVER: once saunaforall.org is attached to the Worker and answering,
-# change this to "https://saunaforall.org" and redeploy. See DOMAIN_CUTOVER.md.
-SITE_URL = os.environ.get(
-    "SITE_URL", "https://sauna-for-all.tiny-block-645d.workers.dev").rstrip("/")
+# Cut over to the real domain on 2026-09-20: saunaforall.org and
+# www.saunaforall.org are attached to this Worker, with www 301-redirecting
+# to the bare domain. See DOMAIN_CUTOVER.md.
+SITE_URL = os.environ.get("SITE_URL", "https://saunaforall.org").rstrip("/")
 
 # While the site lives on the workers.dev preview address there's an argument
 # for keeping it out of search results entirely, so the preview can't be

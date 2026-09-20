@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /resources
 
-Sitemap: https://sauna-for-all.tiny-block-645d.workers.dev/sitemap.xml
+Sitemap: https://saunaforall.org/sitemap.xml
