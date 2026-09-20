@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var signedByHtml = s.signedBy ? '<div class="small muted">' + escapeHtml(s.signedBy) + '</div>' : '';
     var commitmentHtml = s.commitment ? '<p class="signatory-commitment">&ldquo;' + escapeHtml(s.commitment) + '&rdquo;</p>' : '';
     return '<div class="signatory-card" data-categories="' + escapeHtml(catsAttr) + '" data-search="' + escapeHtml(searchAttr) + '" data-country="' + escapeHtml(s.country || '') + '">' +
-      '<div class="signatory-card-top">' + logoTile(s) + '<div class="category-pills">' + categoryPills(s.categories) + '</div></div>' +
+      '<div class="signatory-card-top"><div class="category-pills">' + categoryPills(s.categories) + '</div>' + logoTile(s) + '</div>' +
       nameHtml + signedByHtml +
       '<div class="signatory-country">' + escapeHtml(s.country || '') + '</div>' +
       commitmentHtml +
