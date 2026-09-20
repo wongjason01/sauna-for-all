@@ -710,8 +710,11 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
   flex-direction:column;
   gap: 10px;
 }
-.signatory-card-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-.category-pills{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+/* Pills sit above the logo on every card, whatever their number or length.
+   They used to share a row with the logo and wrap only when they ran out of
+   space, which put them beside some cards, above others and below the rest. */
+.signatory-card-top{ display:flex; flex-direction:column; align-items:flex-start; gap:12px; }
+.category-pills{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-start; }
 .signatory-name-link{ font-weight:800; font-size:1.05rem; text-decoration:underline; text-underline-offset:2px; }
 .signatory-country{ font-size:0.85rem; opacity:0.65; font-weight:600; }
 .signatory-commitment{ font-size:0.92rem; opacity:0.85; font-style:italic; margin-top:4px; }
