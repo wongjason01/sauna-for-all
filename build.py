@@ -289,11 +289,12 @@ def load_signatories(csv_url, fallback):
             order.append(key)
         groups[key].append(r)
 
-    rows = []
-    for key in order:
-        members = groups[key]
+    def make_card(members, split_of="", organisation=None):
         first = members[0]
-        organisation = first["organisation"]
+        # A split card takes its organisation's name from the main card, so
+        # "Fad saoil saunas" typed by one signer and "Fad Saoil Saunas" by
+        # another still read as the same organisation side by side.
+        organisation = organisation if organisation is not None else first["organisation"]
         people_names = _join_names([m["person_name"] for m in members])
         categories = []
         for m in members:
@@ -306,7 +307,7 @@ def load_signatories(csv_url, fallback):
         # list first -- so adding a second signatory to an existing
         # organisation never moves that card.
         earliest = min((m["signed_at"] for m in members if m["signed_at"]), default=None)
-        rows.append({
+        return {
             "signed_at": earliest,
             "row_index": min(m["row_index"] for m in members),
             "name": organisation or people_names,
@@ -316,7 +317,32 @@ def load_signatories(csv_url, fallback):
             "categories": categories or [],
             "commitment": commitment,
             "logo_upload": next((m.get("logo_upload") for m in members if m.get("logo_upload")), ""),
-        })
+            # Set on a card split off from its organisation's main card (see
+            # below). Empty on every ordinary card.
+            "split_of": split_of,
+        }
+
+    rows = []
+    for key in order:
+        members = groups[key]
+        # A card carries at most one commitment. The first person in an
+        # organisation to share one supplies its quote; anyone after them who
+        # also chose to share theirs gets a card of their own, rather than
+        # having their words silently dropped or the card doubling in length.
+        # People who only added their name stay grouped on the main card.
+        main, split = [], []
+        quote_taken = False
+        for m in members:
+            if m["commitment"] and quote_taken:
+                split.append(m)
+            else:
+                quote_taken = quote_taken or bool(m["commitment"])
+                main.append(m)
+        main_card = make_card(main)
+        rows.append(main_card)
+        org_key = _order_key(main_card["name"])
+        for m in split:
+            rows.append(make_card([m], split_of=org_key, organisation=main_card["name"]))
 
     # Ordered by when each signatory actually signed, earliest first, so the
     # directory reads as a lineage: founding signatories at the top, newest
@@ -959,7 +985,7 @@ def page_home():
 
     counter = f'''<section class="stat-strip" id="counter" data-feed-endpoint="{SIGNATORIES_FEED_ENDPOINT}">
   <div class="container stat-grid">
-    <div class="stat-item"><div class="num" id="statSignatories">{len(SIGNATORIES)}</div><div class="label">Signatories</div></div>
+    <div class="stat-item"><div class="num" id="statSignatories">{SIGNATORY_CARD_COUNT}</div><div class="label">Signatories</div></div>
     <div class="stat-item"><div class="num">10</div><div class="label">Principles</div></div>
     <div class="stat-item"><div class="num" id="statCountries">{SIGNATORY_COUNTRY_COUNT}</div><div class="label">Countries</div></div>
     <div class="stat-item"><div class="num">2026</div><div class="label">Introduced at World Sauna Forum</div></div>
@@ -1271,6 +1297,11 @@ if _logos_failed:
     for name, why in _logos_failed:
         print(f"      {name}: {why}")
 SIGNATORY_COUNTRY_COUNT = len({_country_of(s) for s in SIGNATORIES if _country_of(s)})
+# Counts organisations and individuals, not cards: a card split off to carry a
+# second person's commitment is the same signatory organisation, and the live
+# feed (which overwrites this number at runtime) counts the same way -- so
+# counting cards here would flicker between two different totals on load.
+SIGNATORY_CARD_COUNT = len([s for s in SIGNATORIES if not s.get("split_of")])
 
 def page_signatories():
     # Photo sits beside the header text, same treatment as the About page's
@@ -1431,9 +1462,40 @@ def page_signatories():
     # names. Anyone the feed knows about who wasn't in this build is new by
     # definition, and sorts to the end, which is where "earliest first" puts
     # them anyway.
+    def card_key(s):
+        # A split card shares its organisation's name, so the name alone can't
+        # tell the two apart; the signer's name makes the key unique.
+        return (_order_key(s["name"] + " " + s["signed_by"]) if s.get("split_of")
+                else _order_key(s["name"]))
+
     signatory_order_script = (
         "<script>window.SIGNATORY_ORDER = "
-        + json.dumps([_order_key(s["name"]) for s in SIGNATORIES], ensure_ascii=False)
+        + json.dumps([card_key(s) for s in SIGNATORIES], ensure_ascii=False)
+        + ";</script>"
+    )
+
+    # The feed Worker groups by organisation and sends one card, with one
+    # quote, per organisation -- it knows nothing about splitting. Left alone,
+    # its refresh would fold a split card straight back into the main one and
+    # the second person's commitment would vanish again. So the build hands
+    # the page the splits it made: for each split organisation, who stays on
+    # the main card, and the extra cards to add alongside it.
+    splits = {}
+    for s in SIGNATORIES:
+        if not s.get("split_of"):
+            continue
+        entry = splits.setdefault(s["split_of"], {"signedBy": "", "cards": []})
+        entry["cards"].append({
+            "key": card_key(s), "name": s["name"], "signedBy": s["signed_by"],
+            "url": s["url"], "country": s["country"],
+            "categories": s["categories"], "commitment": s["commitment"],
+        })
+    for s in SIGNATORIES:
+        if not s.get("split_of") and _order_key(s["name"]) in splits:
+            splits[_order_key(s["name"])]["signedBy"] = s["signed_by"]
+    signatory_splits_script = (
+        "<script>window.SIGNATORY_SPLITS = "
+        + json.dumps(splits, ensure_ascii=False)
         + ";</script>"
     )
     signatory_logos_script = (
@@ -1535,7 +1597,7 @@ def page_signatories():
 </section>'''
 
     body = (signatories_header + sign + directory + support + regional_partners
-            + signatory_order_script + signatory_logos_script)
+            + signatory_order_script + signatory_splits_script + signatory_logos_script)
     write("signatories.html", layout(
         "Who Has Signed the Charter | Sauna for All",
         "Community sauna operators, researchers, designers and advocates in nine "

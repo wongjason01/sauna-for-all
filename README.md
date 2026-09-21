@@ -74,6 +74,22 @@ first puts them anyway. Names are matched with case and punctuation stripped,
 because the sheet and the feed don't always agree on them — `_order_key()` in
 `build.py` and `orderKey()` in the feed script have to stay in step.
 
+## One organisation, several signers
+
+Everyone who signs for the same organisation shares one card, listed on its
+"Signed by" line -- matched ignoring capitals, so "Fad saoil saunas" and "Fad
+Saoil Saunas" group together. A card carries at most one quote. The first
+person to share a commitment supplies it; anyone after them who also chose to
+share theirs gets a card of their own, under the same organisation name, so
+their words aren't dropped and no card doubles in length. People who only
+added their name stay on the main card. A split card sorts by its own signer's
+date, and doesn't add to the homepage signatory count -- it's the same
+organisation.
+
+The feed Worker only knows how to group, so the build passes its splits to the
+page in `window.SIGNATORY_SPLITS` and the feed refresh re-applies them. Someone
+who joins an organisation between deploys stays grouped until the next build.
+
 ## Signatory logos
 
 The questionnaire's logo question ("upload your organisation's logo, or a
