@@ -73,11 +73,41 @@ document.addEventListener('DOMContentLoaded', function () {
     order.forEach(function (key, i) { if (!(key in rank)) rank[key] = i; });
     return list
       .map(function (s, i) {
-        var r = rank[orderKey(s.name)];
+        // Split cards carry their own key (they share their organisation's
+        // name, so the name can't identify them); everything else keys by name.
+        var r = rank[s._key || orderKey(s.name)];
         return { s: s, rank: r === undefined ? order.length : r, i: i };
       })
       .sort(function (a, b) { return a.rank - b.rank || a.i - b.i; })
       .map(function (e) { return e.s; });
+  }
+
+  // Re-applies the splits build.py made. The feed groups everyone from one
+  // organisation onto a single card with a single quote; where the build gave
+  // a second person their own card to carry their own commitment, this puts
+  // that card back and takes their name off the main card's "Signed by" line.
+  // Anyone who joins an organisation between deploys stays grouped until the
+  // next build, which is when their split is worked out.
+  function applySplits(list) {
+    var splits = window.SIGNATORY_SPLITS;
+    if (!splits || typeof splits !== 'object') return list;
+    var out = list.slice();
+    Object.keys(splits).forEach(function (orgKey) {
+      var entry = splits[orgKey];
+      var main = null;
+      for (var i = 0; i < out.length; i++) {
+        if (!out[i]._key && orderKey(out[i].name) === orgKey) { main = out[i]; break; }
+      }
+      if (!main) return; // organisation no longer in the feed -- nothing to split
+      if (entry.signedBy) main.signedBy = entry.signedBy;
+      (entry.cards || []).forEach(function (c) {
+        out.push({
+          _key: c.key, name: c.name, signedBy: c.signedBy, url: c.url,
+          country: c.country, categories: c.categories, commitment: c.commitment
+        });
+      });
+    });
+    return out;
   }
 
   function categoryPills(cats) {
@@ -117,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       if (grid && Array.isArray(data.signatories)) {
-        grid.innerHTML = orderBySignupDate(data.signatories).map(renderCard).join('');
+        grid.innerHTML = orderBySignupDate(applySplits(data.signatories)).map(renderCard).join('');
         // Re-run the filter/search wiring from main.js now that the grid
         // has an entirely new set of .signatory-card elements -- it reads
         // the DOM fresh each call, so this is safe to call repeatedly.
