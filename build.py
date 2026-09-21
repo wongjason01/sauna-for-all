@@ -1086,8 +1086,8 @@ def page_home():
     }
     write("index.html", layout(
         "Public Sauna, Common Good | Sauna for All",
-        "A global grassroots movement for community sauna. Ten shared principles, "
-        "one charter, and signatories in nine countries. Read it, then sign it.",
+        "A global grassroots movement for public sauna. Ten shared principles, "
+        "one charter, and signatories around the globe. Read it, then sign it.",
         "home", body, path="/",
         share_image="/images/photos/sauna-for-all-2026-23.jpg",
         schema=organization_schema))
