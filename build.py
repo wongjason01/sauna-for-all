@@ -819,8 +819,11 @@ def layout(title, description, active, body, body_class="", path="/",
 <meta name="twitter:title" content="{title}">
 <meta name="twitter:description" content="{description}">
 <meta name="twitter:image" content="{image_url}">
-<link rel="icon" href="/images/logo/sauna-for-all-orange.png" type="image/png">
-<link rel="apple-touch-icon" href="/images/logo/sauna-for-all-orange.png">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/images/favicon/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/images/favicon/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0A382D">
 {schema_html}
 <link rel="stylesheet" href="css/style.css">
 </head>

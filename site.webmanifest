@@ -1,0 +1,11 @@
+{
+  "name": "Sauna for All",
+  "short_name": "Sauna for All",
+  "icons": [
+    { "src": "/images/favicon/favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/images/favicon/favicon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#0A382D",
+  "background_color": "#F6EFE2",
+  "display": "browser"
+}
