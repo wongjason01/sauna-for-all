@@ -106,6 +106,12 @@ gives every file-upload question its own folder, so this one holds only logos
 and headshots; reference letters are in a separate, private folder and stay
 that way.
 
+Because the file is named after the card's title, renaming a signatory's
+organisation -- or clearing it, which makes the card fall back to the person's
+name -- orphans the stored logo: the page looks for a file under the new title
+and finds none, so the card shows an initials badge until the next build
+re-downloads the upload under the new name.
+
 If the fetch fails, the build says so per signatory and that card falls back to
 an initials badge until the next build — nothing breaks, and nothing fails
 silently. Downloads are gitignored: Drive is the source of truth. To override
