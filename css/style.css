@@ -649,6 +649,10 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
   display: block;
 }
 .person .name{ font-weight:700; font-size:0.92rem; }
+/* Steward and advisor names link out to their organisations. Underlined on
+   hover and focus rather than always, so the grid of faces stays calm. */
+.person .name a{ text-decoration:none; text-underline-offset:2px; }
+.person .name a:hover, .person .name a:focus-visible{ text-decoration:underline; color: var(--gold); }
 .person .role{ font-size:0.8rem; opacity:0.7; }
 
 /* ---------- Country list (signatories) ---------- */
