@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
         '<h3>' + escapeHtml(post.title || '') + '</h3>' +
         '<div class="meta">' + escapeHtml(formatDate(post.date)) + '</div>' +
         '<p class="small muted">' + escapeHtml(post.summary || '') + '</p>' +
-        '<a href="' + post.link + '" target="_blank" rel="noopener" style="font-weight:700; text-decoration:underline; font-size:0.9rem;">Read more &rarr;</a>' +
+        '<a href="' + post.link + '" target="_blank" rel="noopener" style="font-weight:700; text-decoration:underline; font-size:0.9rem;">Read more&nbsp;&rarr;</a>' +
       '</div>';
     return card;
   }
