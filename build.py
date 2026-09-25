@@ -153,11 +153,48 @@ def _normalize_url(url):
 
 
 
+# People type their country freehand on the form, so the same place arrives
+# spelled several ways. Left alone, "UK" and "United Kingdom" count as two
+# countries in the stat strip and show as two different labels on adjacent
+# cards. Keys are compared lowercased with punctuation stripped.
+_COUNTRY_ALIASES = {
+    "uk": "United Kingdom",
+    "gb": "United Kingdom",
+    "gbr": "United Kingdom",
+    "greatbritain": "United Kingdom",
+    "unitedkingdom": "United Kingdom",
+    "unitedkingdomofgreatbritainandnorthernireland": "United Kingdom",
+    "us": "United States",
+    "usa": "United States",
+    "unitedstates": "United States",
+    "unitedstatesofamerica": "United States",
+    "america": "United States",
+}
+
+def _normalize_country(country):
+    """Canonical spelling for a freehand country. Anything not in the alias
+    table is returned as typed (just tidied), so a new country is never
+    silently renamed -- only the known spellings of one country are merged."""
+    country = (country or "").strip().strip(".,")
+    if not country:
+        return ""
+    key = re.sub(r"[^a-z]", "", country.lower())
+    return _COUNTRY_ALIASES.get(key, country)
+
+def _tidy_country(raw):
+    """The card label, with only the country part canonicalised -- a city
+    prefix like 'Toronto, Canada' is left intact."""
+    parts = [p.strip() for p in (raw or "").split(",") if p.strip()]
+    if not parts:
+        return ""
+    parts[-1] = _normalize_country(parts[-1])
+    return ", ".join(parts)
+
 def _country_of(record):
     """Data is stored as 'City, Country' (or just 'Country') -- the stat
     strip counts distinct countries, so pull out the last comma segment."""
     country = record.get("country", "")
-    return country.split(",")[-1].strip() if country else ""
+    return _normalize_country(country.split(",")[-1]) if country else ""
 
 
 def _join_names(names):
@@ -313,7 +350,7 @@ def load_signatories(csv_url, fallback):
             "name": organisation or people_names,
             "signed_by": f"Signed by {people_names}" if organisation else "",
             "url": url,
-            "country": first["country"],
+            "country": _tidy_country(first["country"]),
             "categories": categories or [],
             "commitment": commitment,
             "logo_upload": next((m.get("logo_upload") for m in members if m.get("logo_upload")), ""),
@@ -1612,34 +1649,52 @@ def page_signatories():
 # ABOUT PAGE (mission + founding stewards, combined)
 # ---------------------------------------------------------------------------
 def page_about():
+    # Each steward's name links to their organisation's site; the advisors
+    # link to their own. Kamu Sauna, Community Sauna Baths and Fád Saoil
+    # Saunas are shared by more than one steward, hence the repeated URLs.
+    KAMU = "https://www.kamusauna.ca/"
+    COMMUNITY_SAUNA_BATHS = "https://www.community-sauna.co.uk/"
+    FAD_SAOIL = "https://www.fadsaoilsaunas.com/"
     STEWARDS = [
-        ("Becky Pelkonen", "Kamu Sauna", "Canada", "becky-pelkonen.jpg"),
-        ("Polly Wilson", "Community Sauna Baths", "United Kingdom", "polly-wilson.jpg"),
-        ("Charlie Duckworth", "Community Sauna Baths", "United Kingdom", "charlie-duckworth.jpg"),
-        ("Freddie Mehigan", "Community Sauna Network", "United Kingdom", "freddie-mehigan.jpg"),
-        ("Ian Whelan", "Fád Saoil Saunas", "Ireland", "ian-whelan.jpg"),
-        ("Steve Crosbie", "Fád Saoil Saunas", "Ireland", "steve-crosbie.jpg"),
-        ("Jason Wong", "Kotisauna", "Canada", "jason-wong.jpg"),
-        ("Azar Eskandarpour", "Humans Who Bathe", "Mexico", "azar-eskandarpour.jpg"),
-        ("Juho Pelkonen", "Kamu Sauna", "Canada", "juho-pelkonen.jpg"),
-        ("Niamh Murphy", "Kamu Sauna", "Canada", "niamh-murphy.jpg"),
+        ("Becky Pelkonen", "Kamu Sauna", "Canada", "becky-pelkonen.jpg", KAMU),
+        ("Polly Wilson", "Community Sauna Baths", "United Kingdom", "polly-wilson.jpg", COMMUNITY_SAUNA_BATHS),
+        ("Charlie Duckworth", "Community Sauna Baths", "United Kingdom", "charlie-duckworth.jpg", COMMUNITY_SAUNA_BATHS),
+        ("Freddie Mehigan", "Community Sauna Network", "United Kingdom", "freddie-mehigan.jpg", "https://communitysaunanetwork.co.uk/"),
+        ("Ian Whelan", "Fád Saoil Saunas", "Ireland", "ian-whelan.jpg", FAD_SAOIL),
+        ("Steve Crosbie", "Fád Saoil Saunas", "Ireland", "steve-crosbie.jpg", FAD_SAOIL),
+        ("Jason Wong", "Kotisauna", "Canada", "jason-wong.jpg", "https://www.kotisauna.ca/"),
+        ("Azar Eskandarpour", "Humans Who Bathe", "Mexico", "azar-eskandarpour.jpg", "https://www.humanswhobathe.com/"),
+        ("Juho Pelkonen", "Kamu Sauna", "Canada", "juho-pelkonen.jpg", KAMU),
+        ("Niamh Murphy", "Kamu Sauna", "Canada", "niamh-murphy.jpg", KAMU),
     ]
     ADVISORS = [
-        ("Mikkel Aaland", "Author, Historian, and Founder of SaunaAid, United States", "mikkel-aaland.jpg"),
-        ("Dalva Lamminmäki", "Folklorist and Doctoral Researcher, Finland", "dalva-lamminmaki.jpg"),
-        ("Carita Harju", "Sauna from Finland Founder and Executive Director, Finland", "carita-harju.jpg"),
+        ("Mikkel Aaland", "Author, Historian, and Founder of SaunaAid, United States",
+         "mikkel-aaland.jpg", "https://www.mikkelaaland.com/"),
+        ("Dalva Lamminmäki", "Folklorist and Doctoral Researcher, Finland",
+         "dalva-lamminmaki.jpg", "https://www.linkedin.com/in/dalva-lamminm%C3%A4ki-mafolklorist"),
+        ("Carita Harju", "Sauna from Finland Founder and Executive Director, Finland",
+         "carita-harju.jpg", "https://saunafromfinland.com/contact/carita-harju/"),
     ]
 
-    def person(name, role, photo=None):
+    def person(name, role, photo=None, url=""):
         if photo:
             avatar = f'<img src="/images/headshots/{photo}" alt="{name}" loading="lazy">'
         else:
             initials = "".join([p[0] for p in name.split()[:2]])
             avatar = initials
-        return f'''<div class="person"><div class="avatar">{avatar}</div><div class="name">{name}</div><div class="role">{role}</div></div>'''
+        # The link sits on the name, but it leads to the person's organisation
+        # rather than a page about them, so the accessible label says where it
+        # goes instead of leaving a screen reader with a bare name.
+        name_html = (
+            f'<a href="{url}" target="_blank" rel="noopener" '
+            f'aria-label="{name} &ndash; {role} (opens in a new tab)">{name}</a>'
+            if url else name)
+        return f'''<div class="person"><div class="avatar">{avatar}</div><div class="name">{name_html}</div><div class="role">{role}</div></div>'''
 
-    stewards_html = "".join(person(name, f"{org}, {country}", photo) for name, org, country, photo in STEWARDS)
-    advisors_html = "".join(person(name, role, photo) for name, role, photo in ADVISORS)
+    stewards_html = "".join(person(name, f"{org}, {country}", photo, url)
+                            for name, org, country, photo, url in STEWARDS)
+    advisors_html = "".join(person(name, role, photo, url)
+                            for name, role, photo, url in ADVISORS)
 
     body = f'''<section class="section bg-cream" style="padding-bottom:0;" id="story">
   <div class="container two-col">
