@@ -53,6 +53,44 @@ document.addEventListener('DOMContentLoaded', function () {
     return '<div class="logo-tile" style="width:80px; height:80px; border-radius:50%; border:none; background:var(--light-blue); font-size:0.85rem; font-weight:800; color:var(--green-dark);">' + escapeHtml(initials) + '</div>';
   }
 
+  // Mirrors _COUNTRY_ALIASES / _normalize_country in build.py.
+  var COUNTRY_ALIASES = {
+    uk: 'United Kingdom', gb: 'United Kingdom', gbr: 'United Kingdom',
+    greatbritain: 'United Kingdom', unitedkingdom: 'United Kingdom',
+    unitedkingdomofgreatbritainandnorthernireland: 'United Kingdom',
+    us: 'United States', usa: 'United States', unitedstates: 'United States',
+    unitedstatesofamerica: 'United States', america: 'United States'
+  };
+  function normalizeCountry(country) {
+    var c = String(country == null ? '' : country).trim().replace(/^[.,]+|[.,]+$/g, '');
+    if (!c) return '';
+    var key = c.toLowerCase().replace(/[^a-z]/g, '');
+    return COUNTRY_ALIASES[key] || c;
+  }
+  // The card label, canonicalising only the country part (mirrors
+  // _tidy_country in build.py), so "UK" and "United Kingdom" don't show as
+  // different places on neighbouring cards.
+  function tidyCountry(raw) {
+    var parts = String(raw == null ? '' : raw).split(',')
+      .map(function (p) { return p.trim(); }).filter(Boolean);
+    if (!parts.length) return '';
+    parts[parts.length - 1] = normalizeCountry(parts[parts.length - 1]);
+    return parts.join(', ');
+  }
+
+  // Distinct countries across the signatories, counted after folding the
+  // spellings together. null when there is nothing to count from.
+  function countCountries(list) {
+    if (!Array.isArray(list) || !list.length) return null;
+    var seen = {}, n = 0;
+    list.forEach(function (s) {
+      var parts = String(s.country == null ? '' : s.country).split(',');
+      var c = normalizeCountry(parts[parts.length - 1]);
+      if (c && !seen[c]) { seen[c] = true; n++; }
+    });
+    return n;
+  }
+
   // Mirrors _order_key() in build.py -- change both together.
   function orderKey(name) {
     return (name || '').toLowerCase().replace(/[^0-9a-zÀ-ɏ]+/g, '');
@@ -129,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return '<div class="signatory-card" data-categories="' + escapeHtml(catsAttr) + '" data-search="' + escapeHtml(searchAttr) + '" data-country="' + escapeHtml(s.country || '') + '">' +
       '<div class="signatory-card-top"><div class="category-pills">' + categoryPills(s.categories) + '</div>' + logoTile(s) + '</div>' +
       nameHtml + signedByHtml +
-      '<div class="signatory-country">' + escapeHtml(s.country || '') + '</div>' +
+      '<div class="signatory-country">' + escapeHtml(tidyCountry(s.country)) + '</div>' +
       commitmentHtml +
       '</div>';
   }
@@ -143,7 +181,16 @@ document.addEventListener('DOMContentLoaded', function () {
         var sEl = document.getElementById('statSignatories');
         var cEl = document.getElementById('statCountries');
         if (sEl) sEl.textContent = String(data.count);
-        if (cEl && typeof data.countries === 'number') cEl.textContent = String(data.countries);
+        if (cEl) {
+          // The feed counts "UK" and "United Kingdom" as two countries, so
+          // its own total is recounted here from the signatories it sent,
+          // with the spellings folded together (see _normalize_country in
+          // build.py -- the two alias tables have to stay in step). Falls
+          // back to the feed's number if it sent no signatories.
+          var n = countCountries(data.signatories);
+          if (n === null && typeof data.countries === 'number') n = data.countries;
+          if (n !== null) cEl.textContent = String(n);
+        }
       }
 
       if (grid && Array.isArray(data.signatories)) {
