@@ -1118,8 +1118,8 @@ def page_home():
       <h2 style="margin:14px 0 18px;">Grassroots by design, guided by experience</h2>
       <p class="lede muted">Sauna for All has grown from the ground up, guided by stewards who run public saunas, study sauna culture, and build community, alongside the advisors, operators, and bathers who shape it with them.</p>
       <div style="margin-top:18px; display:flex; flex-direction:column; gap:8px;">
-        <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">Meet the founding stewards &rarr;</a>
-        <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700;">Support the movement &rarr;</a>
+        <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">Meet the founding stewards&nbsp;&rarr;</a>
+        <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700;">Support the movement&nbsp;&rarr;</a>
       </div>
     </div>
     <img src="/images/photos/sauna-for-all-2026-13.jpg" alt="Founding stewards and network members among the initial signatories of the Charter" style="width:100%; height:100%; object-fit:cover;">
@@ -1181,8 +1181,8 @@ def page_charter():
     </div>
     <p class="small muted" style="margin-top:14px;">Version 1.0, August 19, 2026. Available in other languages soon.</p>
     <div style="margin-top:22px; display:flex; gap:22px; flex-wrap:wrap;">
-      <a href="/faqs" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Read the FAQs &rarr;</a>
-      <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Support our work &rarr;</a>
+      <a href="/faqs" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Read the FAQs&nbsp;&rarr;</a>
+      <a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700; font-size:0.92rem;">Support our work&nbsp;&rarr;</a>
     </div>
    </div>
    <img src="/images/photos/sauna-for-all-2026-12.jpg" alt="Water poured over cupped hands in a sauna, a moment of care between bathers" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
@@ -1248,7 +1248,7 @@ def page_charter():
         <p class="lede muted">Anyone working to strengthen public sauna as a common good can sign. You don&rsquo;t need to run a sauna. You simply state what you will do, in your own role, to support the Charter&rsquo;s principles.</p>
       </div>
       {who_can_sign_html}
-      <p class="small" style="margin-top:24px; font-weight:700;">Want to join the movement? <a href="#how-signing-works" style="text-decoration:underline;">See how signing works &rarr;</a></p>
+      <p class="small" style="margin-top:24px; font-weight:700;">Want to join the movement? <a href="#how-signing-works" style="text-decoration:underline;">See how signing works&nbsp;&rarr;</a></p>
     </div>
     <img src="/images/photos/sauna-for-all-2026-21.jpg" alt="L&ouml;yly: water poured from a copper ladle over the hot stones of a sauna stove" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
   </div>
@@ -1365,7 +1365,7 @@ def page_signatories():
 
     BEFORE_YOU_BEGIN = [
         'Talk it through with your team, board, or council.',
-        'Ask an existing signatory for a few words of support. <a href="#list" style="text-decoration:underline; font-weight:700;">Find a signatory &rarr;</a>',
+        'Ask an existing signatory for a few words of support. <a href="#list" style="text-decoration:underline; font-weight:700;">Find a signatory&nbsp;&rarr;</a>',
         'Draft your commitments first. The form doesn&rsquo;t save as you go.',
     ]
     before_you_begin_html = "".join(f'<li><span>{item}</span></li>' for item in BEFORE_YOU_BEGIN)
@@ -1387,7 +1387,7 @@ def page_signatories():
       <div>
         <h3>What happens next</h3>
         <p class="muted" style="margin-top:10px;">The founding stewards read every application together, two to four times a year. Once confirmed, you join the signatories and the wider network, and we check in on your commitments as your work grows.</p>
-        <p class="small" style="margin-top:22px; font-weight:700;">Questions about signing? <a href="/faqs" style="text-decoration:underline;">Read the FAQs &rarr;</a></p>
+        <p class="small" style="margin-top:22px; font-weight:700;">Questions about signing? <a href="/faqs" style="text-decoration:underline;">Read the FAQs&nbsp;&rarr;</a></p>
       </div>
     </div>
   </div>
@@ -1575,7 +1575,7 @@ def page_signatories():
         <img src="/images/icons/thumbs-up.png" alt="" style="width:67px; height:67px; flex-shrink:0;" loading="lazy">
       </div>
       <p class="lede muted" style="margin-top:14px;">These are the operators, communities, and advocates who have committed to public sauna as a common good. Find someone near you, or someone doing work like yours.</p>
-      <p class="small muted" style="margin-top:10px;">We&rsquo;re open for new signatories right now. <a href="#sign" style="text-decoration:underline; font-weight:700;">Sign the Charter &rarr;</a></p>
+      <p class="small muted" style="margin-top:10px;">We&rsquo;re open for new signatories right now. <a href="#sign" style="text-decoration:underline; font-weight:700;">Sign the Charter&nbsp;&rarr;</a></p>
     </div>
     {list_html}
   </div>
@@ -1619,11 +1619,11 @@ def page_signatories():
     if REGIONAL_PARTNERS:
         partners_html = "".join(
             f'<div class="info-card"><h3>{p["name"]}</h3><p class="small muted">{p["region"]}</p><p>{p["description"]}</p>'
-            f'<a href="{p["website"]}" style="text-decoration:underline; font-weight:700;">Visit website &rarr;</a></div>'
+            f'<a href="{p["website"]}" style="text-decoration:underline; font-weight:700;">Visit website&nbsp;&rarr;</a></div>'
             for p in REGIONAL_PARTNERS)
-        partners_body = f'<div class="card-grid">{partners_html}</div><p class="small muted" style="margin-top:20px;">Interested in coordinating in your region? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch &rarr;</a></p>'
+        partners_body = f'<div class="card-grid">{partners_html}</div><p class="small muted" style="margin-top:20px;">Interested in coordinating in your region? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch&nbsp;&rarr;</a></p>'
     else:
-        partners_body = '<p class="lede muted">Regional partners coming soon. Interested in coordinating in your region? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch &rarr;</a></p>'
+        partners_body = '<p class="lede muted">Regional partners coming soon. Interested in coordinating in your region? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch&nbsp;&rarr;</a></p>'
 
     regional_partners = f'''<section class="section bg-white" id="regional-partners">
   <div class="container">
@@ -1703,7 +1703,7 @@ def page_about():
       <p class="lede muted" style="max-width:52ch;">Around the world, people are rediscovering public sauna, both for their own wellbeing and for the life it brings to communities.</p>
       <p class="lede muted" style="max-width:52ch; margin-top:16px;">Sauna for All is a grassroots movement guiding this resurgence through shared values, evidence, and collaboration.</p>
       <p class="lede muted" style="max-width:52ch; margin-top:16px;">Our aim is for public sauna to grow as a trusted part of civic and cultural life, rooted in the common good.</p>
-      <a href="#stewards" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the founding stewards &rarr;</a>
+      <a href="#stewards" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the founding stewards&nbsp;&rarr;</a>
     </div>
     <img src="/images/photos/sauna-for-all-2026-05.jpg" alt="Steve Crosbie and Ian Whelan of F&aacute;d Saoil Saunas, founding stewards of the Public Sauna-Bathing Charter" style="width:100%; aspect-ratio:5/6; object-fit:cover;">
   </div>
@@ -1745,7 +1745,7 @@ def page_about():
       <h2>With gratitude</h2>
       <p class="lede" style="font-weight:700; margin-top:10px;">Many have carried the water</p>
       <p class="lede muted" style="margin-top:10px;">People across the sauna world have shared their knowledge and encouragement as the Charter took shape. We thank Sauna from Finland for welcoming this work at the World Sauna Forum, the International Sauna Congress for making room for it, and the grassroots organisers who have stepped forward as early signatories.</p>
-      <a href="/signatories" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the signatories and wider network &rarr;</a>
+      <a href="/signatories" style="display:inline-block; margin-top:18px; text-decoration:underline; font-weight:700;">Meet the signatories and wider network&nbsp;&rarr;</a>
     </div>
     <div>
       <img src="/images/photos/sauna-for-all-2026-04.jpg" alt="Sauna networking and community gathering as part of the World Sauna Forum in Jyväskylä, Finland" style="width:100%; height:100%; object-fit:cover;">
@@ -1775,12 +1775,12 @@ def page_about():
       <div>
         <h3>Stay close on the bench</h3>
         <p class="small muted" style="margin-top:8px;">News, stories, and invitations to online meet-ups.</p>
-        <a href="{SUBSTACK_SUBSCRIBE_URL}" style="display:inline-block; margin-top:10px; text-decoration:underline; font-weight:700;">Sign up &rarr;</a>
+        <a href="{SUBSTACK_SUBSCRIBE_URL}" style="display:inline-block; margin-top:10px; text-decoration:underline; font-weight:700;">Sign up&nbsp;&rarr;</a>
       </div>
       <div>
         <h3>Contact us</h3>
         <p class="small muted" style="margin-top:8px;">A question, an idea, or a story to share? We&rsquo;d love to hear from you.</p>
-        <a href="/contact" style="display:inline-block; margin-top:10px; text-decoration:underline; font-weight:700;">Get in touch &rarr;</a>
+        <a href="/contact" style="display:inline-block; margin-top:10px; text-decoration:underline; font-weight:700;">Get in touch&nbsp;&rarr;</a>
       </div>
     </div>
   </div>
@@ -1884,12 +1884,12 @@ def page_faqs():
         ("Is there a fee?",
          '<p>No. There is currently no mandatory fee to sign the Charter.</p>'
          f'<p>Donations are gratefully received and go directly toward the work of the movement. '
-         f'<a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700;">Donate &rarr;</a></p>'
+         f'<a href="{OPEN_COLLECTIVE_URL}" style="text-decoration:underline; font-weight:700;">Donate&nbsp;&rarr;</a></p>'
          '<p>Funds are stewarded by the founding stewards and used for Charter administration, online '
          'infrastructure, and the development of gatherings, training, research, and case studies.</p>'
          '<p>If you&rsquo;re interested in contributing time, skills, or other in-kind support instead of money, '
          'we&rsquo;d love to hear from you. '
-         '<a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch &rarr;</a></p>'),
+         '<a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch&nbsp;&rarr;</a></p>'),
         ("What do we mean by these terms?",
          '<p><strong>Sauna-bathing.</strong> A living culture and practice rooted in Finnish, Baltic-Finnic, and '
          'Nordic traditions. Its heart is the sauna room and the pouring of water on hot stones, known in Finnish '
@@ -2094,7 +2094,7 @@ def page_news():
         <h3>{esc(post["title"])}</h3>
         {date_html}
         {summary_html}
-        <span class="news-card-more">Read more &rarr;</span>
+        <span class="news-card-more">Read more&nbsp;&rarr;</span>
       </div>
     </a>'''
 
@@ -2125,7 +2125,7 @@ def page_news():
             f'<a href="{p["article_url"]}" class="logo-tile press-logo" target="_blank" rel="noopener">'
             f'<img src="{p["logo_url"]}" alt="{p["name"]}" style="max-width:100%; max-height:100%; object-fit:contain;"></a>'
             for p in PRESS_LOGOS)
-        coverage_link = (f'<a href="{ALL_COVERAGE_URL}" style="text-decoration:underline; font-weight:700;">See all coverage &rarr;</a>'
+        coverage_link = (f'<a href="{ALL_COVERAGE_URL}" style="text-decoration:underline; font-weight:700;">See all coverage&nbsp;&rarr;</a>'
                           if ALL_COVERAGE_URL else "")
         featured = f'''<section class="section bg-cream" id="featured">
   <div class="container">
@@ -2192,7 +2192,7 @@ def page_resources():
         cards = "".join(
             f'<div class="info-card" style="margin-top:14px;"><span class="category-pill">{name}</span>'
             f'<h4 style="margin-top:8px;">{r["title"]}</h4><p class="small">{r["description"]}</p>'
-            f'<a href="{r["link"]}" style="text-decoration:underline; font-weight:700;">View resource &rarr;</a></div>'
+            f'<a href="{r["link"]}" style="text-decoration:underline; font-weight:700;">View resource&nbsp;&rarr;</a></div>'
             for r in items)
         return f'<div><h3>{name}</h3><p class="muted">{desc}</p>{cards}</div>'
 
@@ -2213,7 +2213,7 @@ def page_resources():
       <p style="margin-bottom:14px;">Resources coming soon. Sign up for news to hear when they&rsquo;re ready.</p>
       <a href="{SUBSTACK_SUBSCRIBE_URL}" class="btn btn-solid-orange" style="display:inline-block;">Sign up</a>
     </div>
-    <p class="small muted" style="margin-top:20px;">Have a resource to share? Want to collaborate on a case study? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch &rarr;</a></p>
+    <p class="small muted" style="margin-top:20px;">Have a resource to share? Want to collaborate on a case study? <a href="/contact" style="text-decoration:underline; font-weight:700;">Get in touch&nbsp;&rarr;</a></p>
   </div>
 </section>'''
     # Every section on this page still reads "coming soon". A page that ranks
