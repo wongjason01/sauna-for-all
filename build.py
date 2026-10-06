@@ -43,6 +43,11 @@ _DEFAULT_SIGNATORIES_SHEET_CSV_URL = (
 )
 SIGNATORIES_SHEET_CSV_URL = os.environ.get("SIGNATORIES_SHEET_CSV_URL", _DEFAULT_SIGNATORIES_SHEET_CSV_URL)
 
+# Opt-in to building from the committed snapshot when the sheet can't be read
+# (see load_signatories). Offline work only -- it publishes a stale directory.
+_ALLOW_STALE_SIGNATORIES = os.environ.get(
+    "ALLOW_STALE_SIGNATORIES", "").strip().lower() in ("1", "true", "yes")
+
 # The live source is the raw Google Form response sheet ("Charter Commitment
 # and Stewardship Questionnaire (Responses)") -- not a clean signatories
 # table. It has 40+ columns per submission, most of it private (email,
@@ -128,16 +133,16 @@ def _col_index(letter):
 
 def _fetch_csv(url, timeout=15):
     """Downloads a published Google Sheet as CSV text. Returns None (rather
-    than raising) on any failure, so a bad/expired URL or a build machine
-    with no network access degrades to the placeholder data instead of
-    breaking the whole build."""
+    than raising) on any failure, leaving the decision about what to do
+    about it to the caller -- see load_signatories, which stops the build
+    rather than publish a signatory list it can't vouch for."""
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read()
         return raw.decode("utf-8-sig")
     except Exception as e:
-        print(f"  ! could not fetch signatories sheet ({e}); using placeholder data")
+        print(f"  ! could not fetch signatories sheet ({e})")
         return None
 
 
@@ -250,23 +255,37 @@ def load_signatories(csv_url, fallback):
     """Loads approved, consented signatory rows from the live Charter
     questionnaire response sheet (see _COL / consent notes above), mapped
     onto the dict shape the rest of build.py expects (name/url/country/
-    categories/commitment). Falls back to placeholder rows if no URL is
-    configured, the fetch fails, or no response has public-listing consent
-    yet."""
+    categories/commitment). Raises if the sheet can't be read or comes back
+    with nobody consenting to be listed, so a broken source fails the build
+    instead of quietly publishing a short or empty directory."""
     text = _fetch_csv(csv_url) if csv_url else None
     if text is None:
-        # No network to docs.google.com (sandboxed/offline build). Rather than
-        # emitting an empty directory -- which silently publishes a site with
-        # no signatories on it -- fall back to the committed snapshot in
-        # data/signatories_live.csv. See data/README.md; it's the same safe,
-        # public columns, just hand-refreshed rather than live.
+        # The sheet couldn't be read. There is a committed snapshot at
+        # data/signatories_live.csv, but it is months out of date, and
+        # quietly publishing it would drop real signatories off the site
+        # without anything failing -- the worst kind of outcome now that
+        # builds run unattended every night. So the build stops instead:
+        # a failed build deploys nothing and leaves the current site up.
+        #
+        # Set ALLOW_STALE_SIGNATORIES=1 to use the snapshot anyway. That is
+        # for working offline (this repo's sandbox can't reach Google), not
+        # for production -- Cloudflare must never set it.
         snapshot = os.path.join(ROOT, "data", "signatories_live.csv")
-        if os.path.isfile(snapshot):
+        if _ALLOW_STALE_SIGNATORIES and os.path.isfile(snapshot):
             with open(snapshot, encoding="utf-8") as f:
                 text = f.read()
-            print("  ! live sheet unreachable; using data/signatories_live.csv snapshot")
+            print("  ! live sheet unreachable; ALLOW_STALE_SIGNATORIES is set, "
+                  "so falling back to the data/signatories_live.csv snapshot.")
+            print("    This snapshot is stale -- never publish a build made this way.")
         else:
-            return fallback
+            raise RuntimeError(
+                "could not read the signatories sheet, so the signatory list "
+                "would be wrong. Refusing to build: a failed build leaves the "
+                "current site up, which is the safe outcome. Check that the "
+                "sheet is still shared as 'anyone with the link can view'. To "
+                "build offline from the committed snapshot instead, set "
+                "ALLOW_STALE_SIGNATORIES=1 (never in production)."
+            )
 
     reader = csv.reader(io.StringIO(text))
     next(reader, None)  # header row
@@ -310,7 +329,17 @@ def load_signatories(csv_url, fallback):
         print(f"    (add them to CATEGORY_MAP in build.py to match the site's filter categories)")
 
     if not people_rows:
-        return fallback
+        # The sheet was readable but no row cleared the consent gate. With
+        # dozens of consenting signatories on it, that means something moved
+        # under us -- a renamed consent question, a shifted column -- not that
+        # everyone withdrew. Stop rather than publish an empty directory.
+        raise RuntimeError(
+            "read the signatories sheet but found no rows consenting to be "
+            "listed. That almost certainly means the sheet's columns or the "
+            "consent question changed; check _COL and _PUBLIC_LISTING_PHRASE "
+            "in build.py against the sheet. Refusing to build an empty "
+            "directory: a failed build leaves the current site up."
+        )
 
     # SPEC.md 7.1: "Multiple people from one organisation: Show one card
     # under the organisation name, listing everyone who signed for it."

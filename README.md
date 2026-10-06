@@ -23,6 +23,28 @@ Cloudflare Workers Builds is connected to this repo. A commit to `main`
 rebuilds and redeploys automatically; `wrangler.toml` points it at `dist/`.
 No manual upload step.
 
+Nothing else triggers a rebuild — not the clock, not a new signatory. Since
+several things on the site are baked in at build time (signatory logos pulled
+from Drive, Substack posts on News, and the HTML search engines read), a
+scheduled job supplies the missing commit: `.github/workflows/nightly-rebuild.yml`
+writes a fresh timestamp into `.rebuild-stamp` at 12:00 UTC and pushes it,
+which Cloudflare sees as a change. It can also be run on demand from the
+Actions tab, which is the easiest way to force a rebuild without editing
+anything. It needs **Settings → Actions → General → Workflow permissions** set
+to "Read and write" so the job can push. Note that GitHub suspends scheduled
+workflows in a repository with no activity for 60 days, and emails the owner
+when it does.
+
+A build that can't read the signatories sheet now fails instead of falling
+back to `data/signatories_live.csv`. A failed build deploys nothing and leaves
+the current site up, which is the safe outcome; quietly publishing a months-old
+snapshot would drop real signatories off the site with nothing appearing to go
+wrong. The same applies if the sheet reads but nobody in it consents to being
+listed, which means the columns or the consent question moved rather than that
+everyone withdrew. `ALLOW_STALE_SIGNATORIES=1` opts back into the snapshot for
+working offline — this repo's sandbox can't reach Google — and must never be
+set in Cloudflare.
+
 The site answers on `saunaforall.org`, with `www` 301-redirecting to it. The
 old `*.workers.dev` address is switched off, so there is only ever one copy of
 the site. `SITE_URL` in `build.py` is the single source for every absolute URL
@@ -32,10 +54,11 @@ the site. `SITE_URL` in `build.py` is the single source for every absolute URL
 
 Most copy lives in `build.py` as the source of truth. The exception is the
 signatories directory, which comes from the live Charter questionnaire
-Google Sheet at build time, with `data/signatories_live.csv` as a committed
-fallback for when the sheet can't be reached — so a build never publishes an
-empty directory. The directory and homepage tally also refresh at runtime
-from a feed worker, so new signatories appear without a rebuild.
+Google Sheet at build time; if the sheet can't be reached the build fails
+rather than publish a list it can't vouch for (see Deploys). The directory and
+homepage tally also refresh at runtime from a feed worker, so new signatories
+appear without a rebuild — logos, which are files rather than feed data, still
+wait for the next build.
 
 ## News
 
