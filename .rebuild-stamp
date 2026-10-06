@@ -1,0 +1,6 @@
+# Touched to trigger a rebuild. Cloudflare Workers Builds only runs on a
+# commit, but the site needs periodic rebuilds even when nothing changes:
+# signatory logos, Substack posts and the crawlable copy of each page are
+# all baked in at build time. .github/workflows/nightly-rebuild.yml updates
+# this file on a schedule so that happens without anyone being at a computer.
+2026-10-06T11:14:37Z
