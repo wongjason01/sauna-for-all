@@ -1,0 +1,53 @@
+# Rebuilds the site every night.
+#
+# Why this exists: Cloudflare Workers Builds only rebuilds on a commit, but
+# parts of the site are baked in at build time and go stale on their own --
+# signatory logos downloaded from Drive, Substack posts on the News page, and
+# the copy of each page that search engines read. Without this, a new
+# signatory's logo waits until somebody happens to change the site, which in
+# practice has meant weeks.
+#
+# It works by committing a timestamp to .rebuild-stamp, which Cloudflare sees
+# as a change and rebuilds from. Deliberately done through GitHub rather than
+# a Cloudflare deploy hook so it needs no Cloudflare credentials to set up or
+# to keep running.
+name: Nightly rebuild
+
+on:
+  schedule:
+    # 12:00 UTC = 05:00 Pacific while on daylight time, 04:00 in winter.
+    # GitHub runs schedules in UTC and does not follow daylight saving.
+    - cron: "0 12 * * *"
+  # Lets you run it by hand from the Actions tab, which is also the easiest
+  # way to force a rebuild without editing anything.
+  workflow_dispatch:
+
+# Only the stamp commit needs writing; nothing else is touched.
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stamp and push
+        run: |
+          set -euo pipefail
+          # Keep the explanatory header, replace only the timestamp line.
+          grep '^#' .rebuild-stamp > .rebuild-stamp.new
+          date -u +"%Y-%m-%dT%H:%M:%SZ" >> .rebuild-stamp.new
+          mv .rebuild-stamp.new .rebuild-stamp
+          git config user.name "sauna-for-all nightly rebuild"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .rebuild-stamp
+          # No change means the clock did not move; nothing to do, and the
+          # job should not fail over it.
+          git diff --staged --quiet && { echo "stamp unchanged; nothing to push"; exit 0; }
+          git commit -m "Nightly rebuild $(date -u +%Y-%m-%d)"
+          git push
