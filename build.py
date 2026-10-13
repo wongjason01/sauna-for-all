@@ -2345,6 +2345,9 @@ def write_robots_and_sitemap():
     else:
         robots = ("User-agent: *\nAllow: /\n"
                   + ("" if RESOURCES else "Disallow: /resources\n")
+                  # Not a page -- it's the build timestamp the nightly job
+                  # reads back to confirm its rebuild actually deployed.
+                  + "Disallow: /rebuild-stamp.txt\n"
                   + f"\nSitemap: {SITE_URL}/sitemap.xml\n")
     write("robots.txt", robots)
 

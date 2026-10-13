@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /resources
+Disallow: /rebuild-stamp.txt
 
 Sitemap: https://saunaforall.org/sitemap.xml

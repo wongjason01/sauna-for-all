@@ -142,6 +142,21 @@ def main():
         shutil.copyfile(src_path, os.path.join(DIST, name))
         print(f"copied dist/{name}")
 
+    # Publish the build stamp so the running site can say which commit it was
+    # built from. .github/workflows/nightly-rebuild.yml pushes a timestamp to
+    # .rebuild-stamp and then polls this file until it matches, which is how
+    # it can tell a deploy that landed from one that failed on Cloudflare --
+    # where it has no visibility. Absent outside a normal checkout, which is
+    # fine: the file is only ever read by that one check.
+    stamp_path = os.path.join(ROOT, ".rebuild-stamp")
+    if os.path.isfile(stamp_path):
+        with open(stamp_path) as f:
+            lines = [ln.strip() for ln in f if ln.strip() and not ln.startswith("#")]
+        if lines:
+            with open(os.path.join(DIST, "rebuild-stamp.txt"), "w") as f:
+                f.write(lines[-1] + "\n")
+            print(f"wrote dist/rebuild-stamp.txt ({lines[-1]})")
+
     for rel_path in STATIC_ASSETS:
         src_path = os.path.join(ROOT, rel_path)
         if not os.path.isfile(src_path):

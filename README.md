@@ -27,13 +27,30 @@ Nothing else triggers a rebuild — not the clock, not a new signatory. Since
 several things on the site are baked in at build time (signatory logos pulled
 from Drive, Substack posts on News, and the HTML search engines read), a
 scheduled job supplies the missing commit: `.github/workflows/nightly-rebuild.yml`
-writes a fresh timestamp into `.rebuild-stamp` at 12:00 UTC and pushes it,
+writes a fresh timestamp into `.rebuild-stamp` at 11:43 UTC and pushes it,
 which Cloudflare sees as a change. It can also be run on demand from the
 Actions tab, which is the easiest way to force a rebuild without editing
 anything. It needs **Settings → Actions → General → Workflow permissions** set
 to "Read and write" so the job can push. Note that GitHub suspends scheduled
 workflows in a repository with no activity for 60 days, and emails the owner
 when it does.
+
+The odd minute matters. Scheduled jobs are queued, and the queue on the hour
+is long: set to 12:00, this ran between 17:00 and 21:00 UTC — five to nine
+hours late, every day for a week. An uncommon minute is picked up close to
+the time asked for.
+
+Pushing the commit is the easy half; the build that follows runs on Cloudflare,
+where the job can't see it, and it does sometimes fail. So the job then reads
+the site back. `prepare_deploy.py` publishes the stamp at `/rebuild-stamp.txt`,
+and the job polls that until it matches a stamp from this run, retrying the
+push once before giving up after about half an hour. Without this a failed
+Cloudflare build is invisible: the push succeeds, the job goes green, and the
+site keeps serving its last good deploy until somebody notices a missing logo
+— which is exactly what happened on 13 October 2026. A failing job emails the
+repository owner instead. The check accepts *any* stamp from the run, not only
+the newest, so a slow first build that lands while the retry is waiting counts
+as the success it is.
 
 A build that can't read the signatories sheet now fails instead of falling
 back to `data/signatories_live.csv`. A failed build deploys nothing and leaves
