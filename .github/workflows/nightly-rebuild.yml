@@ -1,4 +1,4 @@
-# Rebuilds the site every night.
+# Rebuilds the site every night, and checks the rebuild actually went live.
 #
 # Why this exists: Cloudflare Workers Builds only rebuilds on a commit, but
 # parts of the site are baked in at build time and go stale on their own --
@@ -11,13 +11,31 @@
 # as a change and rebuilds from. Deliberately done through GitHub rather than
 # a Cloudflare deploy hook so it needs no Cloudflare credentials to set up or
 # to keep running.
+#
+# Pushing the commit is the easy half. The build that follows runs on
+# Cloudflare, where this job can't see it, and it does fail sometimes: the
+# build reads the signatories sheet from Google, and if that read fails the
+# build stops rather than publish a list it can't vouch for. That is the right
+# outcome for the site -- the previous deploy stays up -- but on its own it is
+# silent. The push succeeds, this job goes green, and the site quietly serves
+# yesterday's content until a person happens to notice a missing logo. That
+# happened on 13 October 2026 and is what the verify step below is for: it
+# watches the live site until the deploy lands, retries once if it doesn't,
+# and only then fails -- which sends the repository owner the e-mail that
+# makes a stuck site visible on the day it gets stuck.
 name: Nightly rebuild
 
 on:
   schedule:
-    # 12:00 UTC = 05:00 Pacific while on daylight time, 04:00 in winter.
+    # 11:43 UTC = 04:43 Pacific while on daylight time, 03:43 in winter.
     # GitHub runs schedules in UTC and does not follow daylight saving.
-    - cron: "0 12 * * *"
+    #
+    # The odd minute is deliberate. Scheduled jobs are queued, and the queue
+    # at the top of the hour is long enough that this workflow, originally
+    # set to 12:00, was firing between 17:00 and 21:00 UTC -- five to nine
+    # hours late, every day. An uncommon minute is picked up far closer to
+    # the time asked for.
+    - cron: "43 11 * * *"
   # Lets you run it by hand from the Actions tab, which is also the easiest
   # way to force a rebuild without editing anything.
   workflow_dispatch:
@@ -33,21 +51,81 @@ concurrency:
 jobs:
   rebuild:
     runs-on: ubuntu-latest
+    # Two 15-minute waits plus overhead, with room to spare.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
-      - name: Stamp and push
+      - name: Rebuild and verify it went live
         run: |
           set -euo pipefail
-          # Keep the explanatory header, replace only the timestamp line.
-          grep '^#' .rebuild-stamp > .rebuild-stamp.new
-          date -u +"%Y-%m-%dT%H:%M:%SZ" >> .rebuild-stamp.new
-          mv .rebuild-stamp.new .rebuild-stamp
+
+          SITE="https://saunaforall.org/rebuild-stamp.txt"
+
           git config user.name "sauna-for-all nightly rebuild"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .rebuild-stamp
-          # No change means the clock did not move; nothing to do, and the
-          # job should not fail over it.
-          git diff --staged --quiet && { echo "stamp unchanged; nothing to push"; exit 0; }
-          git commit -m "Nightly rebuild $(date -u +%Y-%m-%d)"
-          git push
+
+          # Writes a fresh timestamp, keeping the file's explanatory header,
+          # and pushes it. Returns 1 if the clock hasn't moved since the last
+          # stamp, which means there is nothing to push.
+          stamp_and_push() {
+            grep '^#' .rebuild-stamp > .rebuild-stamp.new
+            date -u +"%Y-%m-%dT%H:%M:%SZ" >> .rebuild-stamp.new
+            mv .rebuild-stamp.new .rebuild-stamp
+            git add .rebuild-stamp
+            if git diff --staged --quiet; then
+              return 1
+            fi
+            git commit -q -m "Nightly rebuild $(date -u +%Y-%m-%d)"
+            git push -q
+            return 0
+          }
+
+          # prepare_deploy.py publishes the stamp at the site root, so the
+          # live copy of it says which commit the running site was built
+          # from. Polls until it matches one of the stamps this run pushed.
+          #
+          # Any of them, not just the newest: if the first attempt's build
+          # was merely slow rather than broken, it can land while the second
+          # attempt is already waiting, and the site is then refreshed and
+          # correct even though it isn't showing the newest stamp. Insisting
+          # on the newest would report that as a failure.
+          #
+          # Cache-busted, because an edge-cached copy would otherwise answer
+          # for minutes after the new one is live.
+          wait_for_deploy() {
+            local live
+            for _ in $(seq 1 60); do
+              sleep 15
+              live="$(curl -fsS --max-time 20 "${SITE}?cb=${RANDOM}${RANDOM}" || true)"
+              live="$(printf '%s' "$live" | tr -d '[:space:]')"
+              [ -n "$live" ] || continue
+              case " ${pushed} " in
+                *" ${live} "*) echo "$live"; return 0 ;;
+              esac
+            done
+            return 1
+          }
+
+          pushed=""
+          for attempt in 1 2; do
+            if ! stamp_and_push; then
+              echo "Stamp unchanged (same second as the last run); nothing to push."
+              exit 0
+            fi
+            want="$(tail -n 1 .rebuild-stamp | tr -d '[:space:]')"
+            pushed="${pushed} ${want}"
+            echo "Pushed ${want}; waiting for Cloudflare to deploy it."
+            if live="$(wait_for_deploy)"; then
+              echo "Deploy verified live: ${live}"
+              exit 0
+            fi
+            echo "::warning::Attempt ${attempt}: nothing from this run (${pushed# }) was live after 15 minutes."
+            sleep 30
+          done
+
+          echo "::error::The site did not pick up the rebuild after two attempts. \
+          The Cloudflare build is most likely failing -- check Workers Builds for \
+          sauna-for-all. The site is still serving its previous deploy, so nothing \
+          is down; it is just not refreshing."
+          exit 1
