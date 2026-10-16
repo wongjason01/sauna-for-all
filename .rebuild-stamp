@@ -3,4 +3,4 @@
 # signatory logos, Substack posts and the crawlable copy of each page are
 # all baked in at build time. .github/workflows/nightly-rebuild.yml updates
 # this file on a schedule so that happens without anyone being at a computer.
-2026-10-15T15:45:05Z
+2026-10-16T15:34:17Z
