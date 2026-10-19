@@ -5,7 +5,7 @@ Live at https://saunaforall.org
 
 ## How it works
 
-A small static-site generator. `build.py` writes the eight HTML pages from
+A small static-site generator. `build.py` writes the nine HTML pages from
 Python templates, then `prepare_deploy.py` inlines the CSS and JS into each
 page and copies the referenced images and files into `dist/`.
 

@@ -741,6 +741,7 @@ NAV_ITEMS = [
     ]},
     {"href": "/signatories", "label": "Signatories", "dropdown": None},
     {"href": "/news", "label": "News", "dropdown": None},
+    {"href": "/events", "label": "Events", "dropdown": None},
     {"href": "/contact", "label": "Contact", "dropdown": None},
 ]
 
@@ -823,6 +824,7 @@ def footer():
           <h2 class="footer-heading">Get involved</h2>
           <a href="{SUBSTACK_URL or '#'}">Newsletter</a>
           <a href="{OPEN_COLLECTIVE_URL}">Support our work</a>
+          <a href="/events">Events</a>
           <a href="/contact">Contact</a>
         </div>
       </div>
@@ -1163,7 +1165,7 @@ def page_home():
   </div>
 </section>'''
 
-    body = hero + counter + photo_band + charter_summary + why_now + evidence + who_we_are + newsletter
+    body = hero + counter + next_event_strip() + photo_band + charter_summary + why_now + evidence + who_we_are + newsletter
     # Organization schema: what ties scattered brand mentions -- Instagram,
     # LinkedIn, Substack, Open Collective -- back to this site.
     organization_schema = {
@@ -2321,6 +2323,230 @@ def page_contact():
         "contact", body, path="/contact"))
 
 # ---------------------------------------------------------------------------
+# EVENTS PAGE
+# ---------------------------------------------------------------------------
+# Add, edit or remove an entry in EVENTS and everything follows: the /events
+# cards, the Event schema, the homepage "Next event" strip and the "Past
+# events" list. Each event links out to its own registration page, so there
+# is no form or sign-up logic on this site.
+#
+# "start" and "end" carry their own UTC offset, so "has it passed?" is exact
+# wherever the build runs. An event with no "end" is treated as over two hours
+# after it starts. Past events drop off the upcoming list on the next build,
+# which the nightly rebuild takes care of without anyone editing this file.
+EVENT_FALLBACK_HOURS = 2
+EVENTS_PHOTO = "/images/photos/sauna-for-all-2026-13.jpg"
+
+EVENTS = [
+    {
+        "slug": "americas-webinar-2026-11-04",
+        "title": "Building a Movement for Community-Rooted Sauna",
+        "schema_name": "Sauna for All: Building a Movement for Community-Rooted Sauna (Webinar for Canada and the Americas)",
+        "region": "Canada and the Americas",
+        "kind": "Webinar",
+        "start": "2026-11-04T19:00:00-05:00",   # 7:00 pm Eastern (Luma)
+        "end": "2026-11-04T20:15:00-05:00",     # 8:15 pm Eastern (Luma)
+        "date_label": "Wednesday, November 4",
+        "time_label": "5 pm Mountain",
+        "details": ["Online", "Free or by donation"],
+        "free": True,
+        "hosts": "Hosted by Becky Pelkonen and Jess Rastas of Löyly Floating Sauna",
+        "lead": "A free or by-donation session to meet Sauna for All, learn about the Charter, and connect with others growing community sauna across the Americas.",
+        "list_heading": "What to expect",
+        "list": [
+            "A short introduction to Sauna for All and the Charter",
+            "Plans for the movement and what is coming next",
+            "Time to say hello and hear from others",
+            "Open conversation and questions",
+            "How to sign the Charter and join the global community",
+        ],
+        "who": "Anyone who cares about sauna in Canada and the Americas. Whether you run a sauna, are planning one or love going to one, you are welcome. Saunas, organisations and individuals can all sign the Charter, so this is a good place to start.",
+        "zones": "4 pm Pacific · 5 pm Mountain · 6 pm Central · 7 pm Eastern · 8 pm Atlantic · 8:30 pm Newfoundland · 6 pm Mexico City · 7 pm Bogotá and Lima · 9 pm Santiago, Buenos Aires and São Paulo",
+        "button_label": "Register",
+        "url": "https://luma.com/q6167yfi",
+        "where": "You will register on Luma.",
+    },
+    {
+        "slug": "australia-webinar-2026-11-11",
+        "title": "Growing Australia’s Community Sauna Movement",
+        "schema_name": "Sauna for All: Growing Australia’s Community Sauna Movement",
+        "region": "Australia",
+        "kind": "Webinar",
+        "start": "2026-11-11T17:00:00+11:00",   # 5:00 pm Sydney (AEDT)
+        "end": "",                              # the ASA page gives no end time
+        "date_label": "Wednesday, November 11",
+        "time_label": "5 pm Sydney time",
+        "details": ["Online"],
+        "free": False,
+        "hosts": "Hosted by Becky Pelkonen with the Australian Sauna Association",
+        "lead": "Meet Sauna for All and explore how shared global principles can support Australia’s growing grassroots community sauna movement.",
+        "list_heading": "We will explore",
+        "list": [
+            "What Sauna for All is and why it was created",
+            "The principles behind public and community sauna",
+            "How they can support Australia’s movement",
+            "What signing the Charter involves and how to connect globally",
+        ],
+        "who": "Whether you run a sauna, are planning one or care about community sauna in Australia, you are welcome.",
+        # Converted from 5 pm Sydney time; the ASA page itself gives no zone.
+        "zones": "5 pm Sydney, Melbourne, Canberra and Hobart · 4 pm Brisbane · 4:30 pm Adelaide · 3:30 pm Darwin · 2 pm Perth · 7 pm Auckland",
+        "button_label": "Register on the ASA site",
+        "url": "https://saunaaustralia.org.au/events/sauna-for-all-growing-australia-s-community-sauna-movement",
+        "where": "Registration is on the Australian Sauna Association site.",
+    },
+]
+
+def _event_start(ev):
+    return datetime.datetime.fromisoformat(ev["start"])
+
+def _event_end(ev):
+    if ev.get("end"):
+        return datetime.datetime.fromisoformat(ev["end"])
+    return _event_start(ev) + datetime.timedelta(hours=EVENT_FALLBACK_HOURS)
+
+def split_events(now=None):
+    """(upcoming, past): upcoming soonest first, past most recent first."""
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    upcoming = sorted((e for e in EVENTS if _event_end(e) >= now), key=_event_start)
+    past = sorted((e for e in EVENTS if _event_end(e) < now), key=_event_start, reverse=True)
+    return upcoming, past
+
+def event_card(ev):
+    start = _event_start(ev)
+    points = "".join(f"<li>{esc(item)}</li>" for item in ev["list"])
+    details = "".join(f" &middot; {esc(d)}" for d in ev["details"])
+    # The visible label is "Register"; the accessible one says what for and
+    # that it leaves the site.
+    aria = esc(f'{ev["button_label"]}: {ev["title"]} (opens in a new tab)')
+    return f'''<article class="event-card" id="{ev["slug"]}">
+      <div class="event-date" aria-hidden="true">
+        <span class="event-date-month">{start.strftime("%b")}</span>
+        <span class="event-date-day">{start.day}</span>
+        <span class="event-date-weekday">{start.strftime("%a")}</span>
+      </div>
+      <div class="event-body">
+        <p class="event-tags"><span class="event-tag">{esc(ev["region"])}</span><span class="event-kind">{esc(ev["kind"])}</span></p>
+        <h3>{esc(ev["title"])}</h3>
+        <p class="event-when"><time datetime="{ev["start"]}">{esc(ev["date_label"])}</time> &middot; {esc(ev["time_label"])}{details}</p>
+        <p class="event-hosts">{esc(ev["hosts"])}</p>
+        <p class="event-lead">{esc(ev["lead"])}</p>
+        <h4 class="event-list-head">{esc(ev["list_heading"])}</h4>
+        <ul class="event-points">{points}</ul>
+        <p class="event-who"><strong>Who should come:</strong> {esc(ev["who"])}</p>
+        <details class="event-zones"><summary>All time zones</summary><p>{esc(ev["zones"])}</p></details>
+        <div class="event-actions">
+          <a href="{ev["url"]}" class="btn btn-solid-orange" target="_blank" rel="noopener" aria-label="{aria}">{esc(ev["button_label"])}&nbsp;&#8599;</a>
+          <span class="event-note">{esc(ev["where"])}</span>
+        </div>
+      </div>
+    </article>'''
+
+def event_schema(ev):
+    data = {
+        "@context": "https://schema.org",
+        "@type": "Event",
+        "name": ev["schema_name"],
+        "description": ev["lead"],
+        "startDate": ev["start"],
+        "eventStatus": "https://schema.org/EventScheduled",
+        "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+        "location": {"@type": "VirtualLocation", "url": ev["url"]},
+        "organizer": {"@type": "Organization", "name": "Sauna for All", "url": f"{SITE_URL}/"},
+        "image": [f"{SITE_URL}{EVENTS_PHOTO}"],
+        "inLanguage": "en",
+    }
+    if ev.get("end"):
+        data["endDate"] = ev["end"]
+    # Only claim a price where the registration page states one.
+    if ev.get("free"):
+        data["isAccessibleForFree"] = True
+        data["offers"] = {"@type": "Offer", "url": ev["url"], "price": "0",
+                          "priceCurrency": "CAD",
+                          "availability": "https://schema.org/InStock"}
+    return data
+
+def next_event_strip():
+    """Slim homepage strip pointing at the next upcoming event. Empty when
+    there is none, so it disappears on its own."""
+    upcoming, _past = split_events()
+    if not upcoming:
+        return ""
+    ev = upcoming[0]
+    return f'''<section class="next-event-strip" id="next-event">
+  <div class="container">
+    <a href="/events#{ev["slug"]}">
+      <span class="next-event-label">Next event</span>
+      <span class="next-event-text">{esc(ev["date_label"])} &middot; {esc(ev["title"])}</span>
+      <span class="next-event-go">Details&nbsp;&rarr;</span>
+    </a>
+  </div>
+</section>'''
+
+def page_events():
+    upcoming, past = split_events()
+
+    header = '''<section class="section bg-cream" style="padding-bottom:0;" id="events-header">
+  <div class="container two-col" style="align-items:center;">
+    <div>
+      <span class="eyebrow" style="color:var(--gold);">Events</span>
+      <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Join the conversation</h1>
+      <p class="lede muted" style="max-width:52ch;">Meet Sauna for All online. Learn about the Charter, hear what is coming next and connect with people growing community sauna in your region.</p>
+    </div>
+    <img src="/images/photos/sauna-for-all-2026-13.jpg" alt="Six people gathered outdoors in front of a wooden building, smiling together" style="width:100%; aspect-ratio:4/3; object-fit:cover;">
+  </div>
+</section>'''
+
+    if upcoming:
+        upcoming_html = '<div class="event-stack">' + "".join(event_card(e) for e in upcoming) + '</div>'
+    else:
+        upcoming_html = '<p class="lede muted">No events are scheduled right now. Sign up below to hear first.</p>'
+    upcoming_section = f'''<section class="section bg-cream" id="upcoming" style="padding-top:clamp(32px,5vw,56px);">
+  <div class="container">
+    <h2 style="font-size:clamp(1.4rem,2.4vw,1.8rem); margin-bottom:24px;">Coming up</h2>
+    {upcoming_html}
+  </div>
+</section>'''
+
+    past_section = ""
+    if past:
+        rows = "".join(
+            f'<li><span class="event-past-date">{esc(e["date_label"])}, {_event_start(e).year}</span>'
+            f'<span class="event-past-title">{esc(e["title"])}</span>'
+            f'<span class="event-past-region">{esc(e["region"])}</span></li>'
+            for e in past)
+        past_section = f'''<section class="section-tight bg-cream" id="past" style="padding-top:0;">
+  <div class="container">
+    <h2 style="font-size:clamp(1.2rem,2vw,1.5rem); margin-bottom:14px;">Past events</h2>
+    <ul class="event-past">{rows}</ul>
+  </div>
+</section>'''
+
+    # "either" only makes sense while both events are still ahead.
+    if len(upcoming) >= 2:
+        band_heading = "Not near either event?"
+    elif len(upcoming) == 1:
+        band_heading = "Can’t make it?"
+    else:
+        band_heading = "Want to hear first?"
+    band = f'''<section class="section bg-mist" id="events-newsletter">
+  <div class="container" style="max-width:640px; text-align:center;">
+    <h2 style="font-size:clamp(1.3rem,2.2vw,1.6rem); margin-bottom:12px;">{band_heading}</h2>
+    <p class="lede"><strong>Stay close on the bench.</strong> Get updates like these in your inbox.</p>
+    <a href="{SUBSTACK_SUBSCRIBE_URL}" class="btn btn-solid-orange" style="margin-top:14px; display:inline-block;">Sign up</a>
+    <p class="small muted" style="margin-top:22px;">Want a session for your region? Write to <a href="mailto:{CONTACT_EMAIL}" style="text-decoration:underline; font-weight:700;">{CONTACT_EMAIL}</a>.</p>
+    <p class="small" style="margin-top:10px;"><a href="/signatories#sign" style="text-decoration:underline; font-weight:700;">Sign the Charter&nbsp;&rarr;</a></p>
+  </div>
+</section>'''
+
+    write("events.html", layout(
+        "Community Sauna Events and Webinars | Sauna for All",
+        "Join Sauna for All online. Learn about the Public Sauna-Bathing "
+        "Charter and meet people growing community sauna in the Americas and Australia.",
+        "events", header + upcoming_section + past_section + band,
+        path="/events", share_image=EVENTS_PHOTO,
+        schema=[event_schema(e) for e in upcoming] or None))
+
+# ---------------------------------------------------------------------------
 # robots.txt and sitemap.xml
 # ---------------------------------------------------------------------------
 # Both are generated from SITE_URL rather than written by hand, so they can
@@ -2334,6 +2560,7 @@ SITEMAP_PAGES = [
     ("/about", "0.7"),
     ("/faqs", "0.7"),
     ("/news", "0.6"),
+    ("/events", "0.6"),
     ("/contact", "0.4"),
 ]
 
@@ -2374,6 +2601,7 @@ if __name__ == "__main__":
     page_about()
     page_faqs()
     page_news()
+    page_events()
     page_resources()
     page_contact()
     write_robots_and_sitemap()

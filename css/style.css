@@ -854,3 +854,64 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 .bg-green .badge-note{ background: rgba(255,255,255,0.1); color: var(--cream); }
 
 hr.rule{ border:none; border-top:1px solid rgba(15,77,59,0.12); margin: 40px 0; }
+
+/* ---------- Events page ---------- */
+.event-stack{ display:flex; flex-direction:column; gap:20px; }
+.event-card{
+  display:grid; grid-template-columns: 84px minmax(0,1fr); gap: clamp(16px,3vw,28px);
+  background: var(--white); border:1px solid rgba(15,77,59,0.12);
+  border-radius: var(--radius-md); padding: clamp(20px,3vw,32px);
+  scroll-margin-top: 96px;
+}
+.event-date{
+  background: var(--orange); color: var(--dark-green); text-align:center;
+  padding: 12px 0; align-self:start; line-height:1.1;
+}
+.event-date span{ display:block; }
+.event-date-month, .event-date-weekday{ font-size:0.78rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+.event-date-day{ font-size:2.1rem; font-weight:800; line-height:1.1; margin:2px 0; }
+.event-tags{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:10px; }
+.event-tag{ background: var(--sand); color: var(--dark-green); border-radius: var(--radius-pill); padding:4px 12px; font-size:0.78rem; font-weight:700; }
+.event-kind{ font-size:0.82rem; opacity:0.7; }
+.event-body h3{ margin-bottom:8px; }
+.event-when{ font-weight:700; }
+.event-hosts{ opacity:0.75; margin-top:2px; }
+.event-lead{ margin-top:14px; }
+.event-list-head{ font-size:0.95rem; font-weight:700; margin:18px 0 6px; }
+.event-points{ list-style:disc; margin-left:1.2em; }
+.event-points li{ margin-bottom:4px; }
+.event-who{ margin-top:14px; }
+.event-zones{ margin-top:16px; padding-top:12px; border-top:1px solid rgba(15,77,59,0.12); font-size:0.92rem; }
+.event-zones summary{ cursor:pointer; font-weight:700; }
+.event-zones p{ margin-top:8px; opacity:0.8; }
+.event-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:12px 16px; margin-top:20px; }
+.event-actions .btn{ white-space:normal; text-align:center; }
+.event-note{ font-size:0.85rem; opacity:0.75; }
+.event-past li{ display:flex; flex-wrap:wrap; gap:4px 16px; padding:10px 0; border-top:1px solid rgba(15,77,59,0.12); font-size:0.95rem; }
+.event-past-date{ font-weight:700; }
+.event-past-region{ opacity:0.7; margin-left:auto; }
+@media (max-width: 620px){
+  .event-card{ grid-template-columns:1fr; }
+  .event-date{ display:flex; gap:8px; justify-self:start; justify-content:center; align-items:baseline; padding:8px 16px; }
+  .event-date-day{ margin:0; font-size:1.5rem; }
+  .event-actions .btn{ width:100%; }
+  .event-past-region{ margin-left:0; }
+}
+
+/* Homepage "Next event" strip: straight edges, sits under the counter bar. */
+.next-event-strip{ background: var(--dark-green); color: var(--cream); display:flow-root; }
+.next-event-strip a{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; padding:14px 0; }
+.next-event-strip a:focus-visible{ outline:3px solid var(--orange); outline-offset:-3px; }
+.next-event-label{ background: var(--orange); color: var(--dark-green); border-radius: var(--radius-pill); padding:3px 12px; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
+.next-event-text{ font-weight:600; }
+.next-event-go{ margin-left:auto; font-weight:700; text-decoration:underline; font-size:0.9rem; }
+@media (max-width: 620px){ .next-event-go{ margin-left:0; } }
+
+/* Six nav items plus the button are tight between the hamburger breakpoint
+   and a wide desktop, so ease the spacing there. */
+@media (min-width: 901px) and (max-width: 1100px){
+  .nav{ gap:16px; }
+  .nav-links{ gap:14px; }
+  .nav-links a{ font-size:0.88rem; white-space:nowrap; }
+  .nav-cta .btn{ padding:10px 16px; font-size:0.72rem; letter-spacing:0.04em; }
+}

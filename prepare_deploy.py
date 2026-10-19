@@ -32,7 +32,7 @@ DIST = os.path.join(ROOT, "dist")
 
 PAGES = [
     "index.html", "about.html", "charter.html",
-    "signatories.html", "news.html", "faqs.html",
+    "signatories.html", "news.html", "events.html", "faqs.html",
     "resources.html", "contact.html",
 ]
 
