@@ -2391,7 +2391,7 @@ EVENTS = [
         # Converted from 5 pm Sydney time; the ASA page itself gives no zone.
         "zones": "5 pm Sydney, Melbourne, Canberra and Hobart · 4 pm Brisbane · 4:30 pm Adelaide · 3:30 pm Darwin · 2 pm Perth · 7 pm Auckland",
         "button_label": "Register on the ASA site",
-        "url": "https://saunaaustralia.org.au/events/sauna-for-all-growing-australia-s-community-sauna-movement",
+        "url": "https://saunaaustralia.org.au/l/sauna-for-all-growing-australia-s-community-sauna-movement",
         "where": "Registration is on the Australian Sauna Association site.",
     },
 ]
