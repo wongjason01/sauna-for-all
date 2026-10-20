@@ -2382,7 +2382,7 @@ EVENTS = [
         "start": "2026-11-11T17:00:00+11:00",   # 5:00 pm Sydney (AEDT)
         "end": "",                              # the ASA page gives no end time
         "date_label": "Wednesday, November 11",
-        "time_label": "5 pm Sydney time",
+        "time_label": "5 pm Sydney time (AEDT)",
         "details": ["Online"],
         "free": False,
         "hosts": "Hosted by Becky Pelkonen with the Australian Sauna Association",
@@ -2454,7 +2454,7 @@ EVENTS = [
         "start": "2026-11-24T18:30:00+11:00",   # 6:30 pm Sydney (AEDT), ASA page
         "end": "",                              # "about 60 minutes"; the 2 hour fallback covers it
         "date_label": "Tuesday, November 24",
-        "time_label": "6:30 pm Sydney time",
+        "time_label": "6:30 pm Sydney time (AEDT)",
         "details": ["Online", "About 60 minutes"],
         "free": False,
         "organizer": {"name": "Australian Sauna Association", "url": "https://saunaaustralia.org.au/"},
