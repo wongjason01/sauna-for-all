@@ -2334,6 +2334,13 @@ def page_contact():
 # wherever the build runs. An event with no "end" is treated as over two hours
 # after it starts. Past events drop off the upcoming list on the next build,
 # which the nightly rebuild takes care of without anyone editing this file.
+#
+# An event with no published start time sets "all_day": True, gives "start"
+# as a bare date and "tz" as the venue's UTC offset; it counts as over at the
+# end of that day. Optional keys: "place" (venue line), "venue", "locality"
+# and "country" (in-person schema), "organizer", "blocks" (several headed
+# lists or paragraphs instead of one "list"), "zones" (omit for no time-zone
+# toggle) and "where_email" (turned into a mailto link inside "where").
 EVENT_FALLBACK_HOURS = 2
 EVENTS_PHOTO = "/images/photos/sauna-for-all-2026-13.jpg"
 
@@ -2394,12 +2401,90 @@ EVENTS = [
         "url": "https://saunaaustralia.org.au/l/sauna-for-all-growing-australia-s-community-sauna-movement",
         "where": "Registration is on the Australian Sauna Association site.",
     },
+    {
+        "slug": "uk-ireland-gathering-2026-11-16",
+        "title": "UK & Ireland Community Sauna Network Gathering",
+        "schema_name": "UK & Ireland Community Sauna Network Gathering",
+        "region": "UK and Ireland",
+        "kind": "In person",
+        "start": "2026-11-16",
+        "all_day": True,                        # no start time published yet
+        "tz": "+00:00",                         # London is on GMT in November
+        "end": "",
+        "date_label": "Monday, November 16",
+        "time_label": "",
+        "place": "Hackney Baths, London",
+        "venue": "Hackney Baths",
+        "locality": "London",
+        "country": "GB",
+        "details": ["In person"],
+        "free": False,
+        "organizer": {"name": "Community Sauna Network", "url": "https://communitysaunanetwork.co.uk/"},
+        "hosts": "Hosted by the Community Sauna Network. Becky Pelkonen presents the Charter.",
+        "lead": "The first UK and Ireland-wide gathering of the Community Sauna Network. Operators come together to connect, learn, talk through shared issues and celebrate what we are building together. Becky will present the Charter in the UK for the first time.",
+        "blocks": [
+            {"heading": "The big four topics", "items": [
+                "Social prescribing: sauna as medicine, in practice",
+                "Accessibility: opening our doors to everyone",
+                "Water hygiene and regulations: keeping it clean, safe and compliant",
+                "Planning, licensing and architecture: from idea to open doors",
+            ]},
+            {"heading": "Speakers include", "items": [
+                ("Polly Wilson, Community Sauna Baths.", "Led the work to get sauna recognised in the NHS social prescribing scheme. She will share how to launch a programme like this and what it has achieved, then host a smaller workshop."),
+                ("Will Behenna, Beach Access Project.", "Founder of the Beach Access Project, now leading the conversation on making sauna accessible to people with disabilities and medical or mental health conditions."),
+                ("Mike Shuff, Chair of PWTAG.", "Chairs the Pool Water Treatment Advisory Group, which sets the UK standard for pool water treatment. 30+ years in wet leisure. The person to ask about plunge pools, water safety and sauna regulation."),
+                ("Becky Pelkonen, Sauna for All.", "Presenting the Charter, a global movement to keep sauna safe, accessible, culturally stewarded and a common good as the industry grows."),
+            ]},
+            {"heading": "Planning panel", "text": "Planning is one of the biggest hurdles to opening and growing a sauna. A panel of council, planning consultant and architect voices will cover every angle of an application."},
+            {"heading": "Time to connect", "text": "Small-group workshops run between talks, on topics including scaling, year one successes, site operations, sauna maintenance, sauna events, sauna research and sauna building. The day closes with an evening of sauna and Aufguss."},
+        ],
+        "who": "Community sauna operators across the UK and Ireland, and people planning to open one.",
+        "zones": "",
+        "button_label": "Get in touch to join",
+        "url": "https://communitysaunanetwork.co.uk/",
+        "where": "Contact the Community Sauna Network to join, or email info@communitysaunanetwork.co.uk.",
+        "where_email": "info@communitysaunanetwork.co.uk",
+    },
+    {
+        "slug": "australia-mobile-sauna-2026-11-24",
+        "title": "State of the Mobile Sauna Movement",
+        "schema_name": "State of the Mobile Sauna Movement",
+        "region": "Australia",
+        "kind": "Webinar",
+        "start": "2026-11-24T18:30:00+11:00",   # 6:30 pm Sydney (AEDT), ASA page
+        "end": "",                              # "about 60 minutes"; the 2 hour fallback covers it
+        "date_label": "Tuesday, November 24",
+        "time_label": "6:30 pm Sydney time",
+        "details": ["Online", "About 60 minutes"],
+        "free": False,
+        "organizer": {"name": "Australian Sauna Association", "url": "https://saunaaustralia.org.au/"},
+        "hosts": "Hosted by the Australian Sauna Association",
+        "lead": "Mobile, wood-fired saunas on trailers transformed public bathing in the UK and are now appearing across Australia. Operators from Australia and the UK come together to talk plainly about the road ahead.",
+        "list_heading": "We will explore",
+        "list": [
+            "How the mobile sauna movement grew in the UK and is taking root in Australia",
+            "The hurdles operators face: land access, insurance and council approvals",
+            "Lessons from the UK: what worked, what did not, and what comes next",
+            "Why Australia’s landscapes suit mobile sauna",
+            "Open Q&A with the full panel",
+        ],
+        "who": "Current and future operators, councils and landowners, venues, community builders and anyone who wants more sauna near them. A recording will be shared with everyone who registers.",
+        # Converted from 6:30 pm Sydney time; the ASA page gives no zone.
+        "zones": "6:30 pm Sydney, Melbourne, Canberra and Hobart · 5:30 pm Brisbane · 6 pm Adelaide · 5 pm Darwin · 3:30 pm Perth · 8:30 pm Auckland",
+        "button_label": "Register on the ASA site",
+        "url": "https://saunaaustralia.org.au/l/state-of-the-movement",
+        "where": "Registration is on the Australian Sauna Association site.",
+    },
 ]
 
 def _event_start(ev):
+    if ev.get("all_day"):
+        return datetime.datetime.fromisoformat(ev["start"] + "T00:00:00" + ev["tz"])
     return datetime.datetime.fromisoformat(ev["start"])
 
 def _event_end(ev):
+    if ev.get("all_day"):
+        return _event_start(ev) + datetime.timedelta(days=1)
     if ev.get("end"):
         return datetime.datetime.fromisoformat(ev["end"])
     return _event_start(ev) + datetime.timedelta(hours=EVENT_FALLBACK_HOURS)
@@ -2411,10 +2496,35 @@ def split_events(now=None):
     past = sorted((e for e in EVENTS if _event_end(e) < now), key=_event_start, reverse=True)
     return upcoming, past
 
+def _event_block_html(block):
+    """One headed block under the intro: a bullet list, a paragraph, or both.
+    A list item is a string, or a (bold lead-in, rest) pair."""
+    html = f'<h4 class="event-list-head">{esc(block["heading"])}</h4>'
+    if block.get("items"):
+        items = ""
+        for item in block["items"]:
+            if isinstance(item, (tuple, list)):
+                items += f"<li><strong>{esc(item[0])}</strong> {esc(item[1])}</li>"
+            else:
+                items += f"<li>{esc(item)}</li>"
+        html += f'<ul class="event-points">{items}</ul>'
+    if block.get("text"):
+        html += f'<p class="event-block-text">{esc(block["text"])}</p>'
+    return html
+
 def event_card(ev):
     start = _event_start(ev)
-    points = "".join(f"<li>{esc(item)}</li>" for item in ev["list"])
-    details = "".join(f" &middot; {esc(d)}" for d in ev["details"])
+    blocks = ev.get("blocks") or [{"heading": ev["list_heading"], "items": ev["list"]}]
+    blocks_html = "".join(_event_block_html(b) for b in blocks)
+    when_parts = [f'<time datetime="{ev["start"]}">{esc(ev["date_label"])}</time>']
+    when_parts += [esc(p) for p in [ev.get("time_label"), ev.get("place")] + list(ev["details"]) if p]
+    when = " &middot; ".join(when_parts)
+    zones = (f'<details class="event-zones"><summary>All time zones</summary><p>{esc(ev["zones"])}</p></details>'
+             if ev.get("zones") else "")
+    where = esc(ev["where"])
+    if ev.get("where_email"):
+        email = ev["where_email"]
+        where = where.replace(esc(email), f'<a href="mailto:{email}">{esc(email)}</a>')
     # The visible label is "Register"; the accessible one says what for and
     # that it leaves the site.
     aria = esc(f'{ev["button_label"]}: {ev["title"]} (opens in a new tab)')
@@ -2427,16 +2537,15 @@ def event_card(ev):
       <div class="event-body">
         <p class="event-tags"><span class="event-tag">{esc(ev["region"])}</span><span class="event-kind">{esc(ev["kind"])}</span></p>
         <h3>{esc(ev["title"])}</h3>
-        <p class="event-when"><time datetime="{ev["start"]}">{esc(ev["date_label"])}</time> &middot; {esc(ev["time_label"])}{details}</p>
+        <p class="event-when">{when}</p>
         <p class="event-hosts">{esc(ev["hosts"])}</p>
         <p class="event-lead">{esc(ev["lead"])}</p>
-        <h4 class="event-list-head">{esc(ev["list_heading"])}</h4>
-        <ul class="event-points">{points}</ul>
+        {blocks_html}
         <p class="event-who"><strong>Who should come:</strong> {esc(ev["who"])}</p>
-        <details class="event-zones"><summary>All time zones</summary><p>{esc(ev["zones"])}</p></details>
+        {zones}
         <div class="event-actions">
           <a href="{ev["url"]}" class="btn btn-solid-orange" target="_blank" rel="noopener" aria-label="{aria}">{esc(ev["button_label"])}&nbsp;&#8599;</a>
-          <span class="event-note">{esc(ev["where"])}</span>
+          <span class="event-note">{where}</span>
         </div>
       </div>
     </article>'''
@@ -2455,6 +2564,14 @@ def event_schema(ev):
         "image": [f"{SITE_URL}{EVENTS_PHOTO}"],
         "inLanguage": "en",
     }
+    if ev.get("organizer"):
+        data["organizer"] = {"@type": "Organization", **ev["organizer"]}
+    if ev.get("venue"):
+        data["eventAttendanceMode"] = "https://schema.org/OfflineEventAttendanceMode"
+        data["location"] = {"@type": "Place", "name": ev["venue"],
+                            "address": {"@type": "PostalAddress",
+                                        "addressLocality": ev["locality"],
+                                        "addressCountry": ev["country"]}}
     if ev.get("end"):
         data["endDate"] = ev["end"]
     # Only claim a price where the registration page states one.
@@ -2490,7 +2607,7 @@ def page_events():
     <div>
       <span class="eyebrow" style="color:var(--gold);">Events</span>
       <h1 style="font-size:clamp(2rem,4vw,2.6rem); margin:14px 0 16px;">Join the conversation</h1>
-      <p class="lede muted" style="max-width:52ch;">Meet Sauna for All online. Learn about the Charter, hear what is coming next and connect with people growing community sauna in your region.</p>
+      <p class="lede muted" style="max-width:52ch;">Meet Sauna for All online and in person. Learn about the Charter, hear what is coming next and connect with people growing community sauna in your region.</p>
     </div>
     <img src="/images/photos/sauna-for-all-2026-13.jpg" alt="Six people gathered outdoors in front of a wooden building, smiling together" style="width:100%; aspect-ratio:4/3; object-fit:cover;">
   </div>
@@ -2521,8 +2638,10 @@ def page_events():
   </div>
 </section>'''
 
-    # "either" only makes sense while both events are still ahead.
-    if len(upcoming) >= 2:
+    # "either" only makes sense for exactly two events still ahead.
+    if len(upcoming) >= 3:
+        band_heading = "Not near any of these events?"
+    elif len(upcoming) == 2:
         band_heading = "Not near either event?"
     elif len(upcoming) == 1:
         band_heading = "Can’t make it?"
@@ -2540,8 +2659,8 @@ def page_events():
 
     write("events.html", layout(
         "Community Sauna Events and Webinars | Sauna for All",
-        "Join Sauna for All online. Learn about the Public Sauna-Bathing "
-        "Charter and meet people growing community sauna in the Americas and Australia.",
+        "Join Sauna for All online and in person. Learn about the Public Sauna-Bathing "
+        "Charter and meet people growing community sauna around the world.",
         "events", header + upcoming_section + past_section + band,
         path="/events", share_image=EVENTS_PHOTO,
         schema=[event_schema(e) for e in upcoming] or None))

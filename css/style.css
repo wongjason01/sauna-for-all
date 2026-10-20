@@ -887,6 +887,9 @@ hr.rule{ border:none; border-top:1px solid rgba(15,77,59,0.12); margin: 40px 0; 
 .event-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:12px 16px; margin-top:20px; }
 .event-actions .btn{ white-space:normal; text-align:center; }
 .event-note{ font-size:0.85rem; opacity:0.75; }
+.event-note a{ text-decoration:underline; font-weight:700; }
+.event-block-text{ margin-top:2px; }
+.event-points li strong{ font-weight:700; }
 .event-past li{ display:flex; flex-wrap:wrap; gap:4px 16px; padding:10px 0; border-top:1px solid rgba(15,77,59,0.12); font-size:0.95rem; }
 .event-past-date{ font-weight:700; }
 .event-past-region{ opacity:0.7; margin-left:auto; }
