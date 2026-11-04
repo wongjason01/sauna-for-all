@@ -1791,7 +1791,7 @@ def page_about():
   </div>
 </section>
 
-<section class="section bg-white" id="get-in-touch">
+<section class="section section-tight bg-white" id="get-in-touch">
   <div class="container">
     <div class="contact-strip">
       <div class="contact-strip-text">
