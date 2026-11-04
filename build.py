@@ -111,6 +111,10 @@ CATEGORY_MAP = {
     "researcher or educator": "Researchers and Educators",
     "funder or investor": "Funders and Investors",
     "individual supporter": "Bathers and Advocates",
+    # The form spells this one out in full. Shown as just "Practitioner", so
+    # the pill stays the length of every other category label rather than
+    # running to three lines on a card.
+    "practitioner (traditional, ritual, aufguss, or other sauna practitioner)": "Practitioner",
 }
 
 SIGNATORY_FILTERS = [
@@ -1575,6 +1579,20 @@ def page_signatories():
         + ";</script>"
     )
 
+    # The feed Worker sends each signatory's answer from the sheet's category
+    # column exactly as the form recorded it, not the short label a card
+    # shows. Since the feed refresh re-renders the whole grid, a card built
+    # with "Practitioner" would flip back to "Practitioner (traditional,
+    # ritual, aufguss, or other sauna practitioner)" a moment after the page
+    # loads. So the build hands over the same mapping it used, keyed by the
+    # lowercased raw answer, and the refresh applies it too -- one source for
+    # the labels, both render paths in step.
+    signatory_categories_script = (
+        "<script>window.SIGNATORY_CATEGORY_ALIASES = "
+        + json.dumps(CATEGORY_MAP, ensure_ascii=False)
+        + ";</script>"
+    )
+
     category_chips_html = "".join(
         f'<button type="button" class="filter-chip" data-category="{c}">{c}</button>' for c in SIGNATORY_FILTERS
     )
@@ -1668,7 +1686,8 @@ def page_signatories():
 </section>'''
 
     body = (signatories_header + sign + directory + support + regional_partners
-            + signatory_order_script + signatory_splits_script + signatory_logos_script)
+            + signatory_order_script + signatory_splits_script + signatory_logos_script
+            + signatory_categories_script)
     write("signatories.html", layout(
         "Who Has Signed the Charter | Sauna for All",
         "Community sauna operators, researchers, designers and advocates in nine "
