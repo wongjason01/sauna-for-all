@@ -1755,17 +1755,51 @@ def page_about():
   </div>
 </section>
 
+<section class="section bg-green" id="signatories-lead">
+  <div class="container" style="max-width:880px; text-align:center;">
+    <h2 class="statement" style="margin:0 auto;">Everyone who signs the Charter is a leader of this movement.</h2>
+    <p class="lede" style="max-width:50ch; margin:20px auto 0; opacity:0.8;">Without our signatories there would be no movement at all. We all stand &mdash; and sit on the sauna bench &mdash; together.</p>
+  </div>
+</section>
+
 <section class="section bg-white" id="stewards">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">About</span>
       <h2>Founding stewards</h2>
-      <p class="lede" style="font-weight:700; margin-top:10px;">Guided by an international steering group</p>
-      <p class="lede muted" style="margin-top:10px;">The founding stewards are practitioners, researchers, and community leaders who run, study, and champion public sauna in their own communities. Together, they care for the Charter, support signatories in keeping their commitments, and help build the shared knowledge and research that strengthen public sauna around the world.</p>
+      <p class="lede muted" style="margin-top:14px;">Practitioners, researchers and community leaders who run, study and champion public sauna in their own communities. They came together at the World Sauna Forum to develop the Charter, were the first to sign it, and gave their time and energy to sharing it around the world.</p>
     </div>
     <div class="people-grid">{stewards_html}</div>
-    <p class="small muted" style="margin-top:34px; font-weight:700;">With Special Thanks to Advisors</p>
+    <p class="small muted" style="margin-top:22px; max-width:70ch;">For now, they act as an initial steering group, helping regional advocacy and projects get off the ground.</p>
+    <p class="small muted" style="margin-top:52px; font-weight:700;">With Special Thanks to Advisors</p>
     <div class="people-grid" style="grid-template-columns:repeat(3,1fr); max-width:640px; margin-top:14px;">{advisors_html}</div>
+  </div>
+</section>
+
+<section class="section bg-cream" id="how-we-work">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">How we work</span>
+      <h2>It&rsquo;s a grassroots movement, and it&rsquo;s growing.</h2>
+      <p class="lede muted" style="margin-top:14px;">We don&rsquo;t have a board of directors. We&rsquo;re still shaping our strategic initiatives, drawing on an inspiring first year of engagement and outreach.</p>
+    </div>
+    <div class="card-grid">
+      <div class="info-card"><h3>Shaped by a first year of outreach</h3><p>Conversations with networks, individuals, cultural groups, researchers and associations.</p></div>
+      <div class="info-card"><h3>Led from the ground up</h3><p>Signatories lead this work in their own communities.</p></div>
+      <div class="info-card"><h3>Regional partners on the ground</h3><p>Bringing advisory, activation and event-based work to life.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section bg-white" id="get-in-touch">
+  <div class="container">
+    <div class="contact-strip">
+      <div class="contact-strip-text">
+        <div class="contact-face"><img src="/images/headshots/becky-pelkonen.jpg" alt="Becky Pelkonen" loading="lazy"></div>
+        <p class="small" style="max-width:52ch; line-height:1.6;">Becky Pelkonen is currently the main point of contact for anyone who&rsquo;d like to get involved. Thank you for all of your support and excitement. Let&rsquo;s keep going!</p>
+      </div>
+      <a href="/contact" class="btn btn-outline-dark">Contact us</a>
+    </div>
   </div>
 </section>
 
@@ -1801,6 +1835,19 @@ def page_about():
         <p>Sauna for All is run by volunteers. Your contribution keeps the Charter, this site, and future gatherings going.</p>
         <a href="{OPEN_COLLECTIVE_URL}" class="btn btn-outline-dark" style="margin-top:14px; display:inline-block; background:#e7c196;">Make a donation</a>
       </div>
+    </div>
+    <div class="skills-panel" style="margin-top:24px;">
+      <h3>Share your skills</h3>
+      <p class="lede muted" style="margin-top:10px; max-width:62ch; font-size:1.05rem;">We&rsquo;re looking for people to share their skills and experience in:</p>
+      <div class="skill-pills">
+        <span class="skill-pill">Content creation</span>
+        <span class="skill-pill">Research for case studies</span>
+        <span class="skill-pill">Toolkits</span>
+        <span class="skill-pill">Advocacy initiatives</span>
+        <span class="skill-pill">Fundraising</span>
+        <span class="skill-pill">Events</span>
+      </div>
+      <p class="small" style="margin-top:16px;">If any of these speak to you, <a href="/contact" style="font-weight:700; text-decoration:underline; text-underline-offset:2px;">we&rsquo;d love to hear from you</a>.</p>
     </div>
     <div class="card-grid-2" style="margin-top:24px;">
       <div>
