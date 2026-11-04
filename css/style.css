@@ -655,6 +655,51 @@ h3, .h3{ font-size: clamp(1.15rem, 1.6vw, 1.4rem); font-weight: 700; line-height
 .person .name a:hover, .person .name a:focus-visible{ text-decoration:underline; color: var(--gold); }
 .person .role{ font-size:0.8rem; opacity:0.7; }
 
+/* ---------- About: full-width statement band ---------- */
+/* Holds the headline to roughly two lines at every width, so it reads as a
+   statement rather than a paragraph that happens to be centred. */
+.statement{ max-width: 30ch; }
+@media (max-width: 640px){ .statement{ max-width: 20ch; } }
+
+/* ---------- About: point-of-contact strip ---------- */
+.contact-strip{
+  display: flex; flex-wrap: wrap; gap: 22px;
+  align-items: center; justify-content: space-between;
+  background: var(--mist);
+  padding: 24px 30px;
+  border-radius: var(--radius-lg);
+}
+.contact-strip-text{
+  display: flex; gap: 18px; align-items: center;
+  flex: 1; min-width: min(100%, 420px);
+}
+.contact-face{
+  width: 76px; flex: none; aspect-ratio: 1;
+  border-radius: 50%; overflow: hidden;
+  background: var(--light-blue);
+}
+.contact-face img{ width:100%; height:100%; object-fit: cover; display:block; }
+@media (max-width: 640px){
+  .contact-strip{ padding: 22px; }
+  .contact-strip .btn{ width: 100%; }
+}
+
+/* ---------- About: skills we're looking for ---------- */
+/* The six skills are set as pills rather than a comma-separated sentence --
+   same words, but scannable, and it keeps the Get involved section from
+   turning into another paragraph. */
+.skills-panel{
+  background: var(--mist);
+  border-radius: var(--radius-lg);
+  padding: clamp(24px, 3vw, 32px);
+}
+.skill-pills{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.skill-pill{
+  font-size: 0.85rem; font-weight: 700;
+  background: var(--white); color: var(--green-dark);
+  padding: 8px 14px; border-radius: var(--radius-pill);
+}
+
 /* ---------- Country list (signatories) ---------- */
 .country-block{ margin-bottom: 30px; padding-bottom: 26px; border-bottom: 1px solid rgba(15,77,59,0.12); }
 .country-block:last-child{ border-bottom:none; }
