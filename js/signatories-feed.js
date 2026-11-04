@@ -148,12 +148,27 @@ document.addEventListener('DOMContentLoaded', function () {
     return out;
   }
 
+  // The feed sends the sheet's raw category answer; a card shows a short
+  // label for it. build.py writes the mapping it used into the page as
+  // window.SIGNATORY_CATEGORY_ALIASES (keyed by the lowercased raw answer),
+  // so this refresh labels a card exactly as the build did instead of
+  // replacing "Practitioner" with the form's full question text. Applying it
+  // to an already-short label is harmless -- those aren't keys in the map.
+  function mapCategories(cats) {
+    var aliases = window.SIGNATORY_CATEGORY_ALIASES || {};
+    return (cats || []).map(function (c) {
+      return aliases[String(c == null ? '' : c).trim().toLowerCase()] || c;
+    });
+  }
+
   function categoryPills(cats) {
     return (cats || []).map(function (c) { return '<span class="category-pill">' + escapeHtml(c) + '</span>'; }).join('');
   }
 
   function renderCard(s) {
-    var catsAttr = (s.categories || []).join('|');
+    // Mapped once, so the filter attribute and the visible pill can't drift.
+    var cats = mapCategories(s.categories);
+    var catsAttr = cats.join('|');
     var searchAttr = [s.name, s.signedBy || '', s.country || ''].join(' ');
     var hasUrl = s.url && s.url !== '#';
     // Wrapped in an <h3>, matching build.py's signatory_card -- the names
@@ -165,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var signedByHtml = s.signedBy ? '<div class="small muted">' + escapeHtml(s.signedBy) + '</div>' : '';
     var commitmentHtml = s.commitment ? '<p class="signatory-commitment">&ldquo;' + escapeHtml(s.commitment) + '&rdquo;</p>' : '';
     return '<div class="signatory-card" data-categories="' + escapeHtml(catsAttr) + '" data-search="' + escapeHtml(searchAttr) + '" data-country="' + escapeHtml(s.country || '') + '">' +
-      '<div class="signatory-card-top"><div class="category-pills">' + categoryPills(s.categories) + '</div>' + logoTile(s) + '</div>' +
+      '<div class="signatory-card-top"><div class="category-pills">' + categoryPills(cats) + '</div>' + logoTile(s) + '</div>' +
       nameHtml + signedByHtml +
       '<div class="signatory-country">' + escapeHtml(tidyCountry(s.country)) + '</div>' +
       commitmentHtml +
