@@ -2594,7 +2594,9 @@ def event_card(ev):
     # The visible label is "Register"; the accessible one says what for and
     # that it leaves the site.
     aria = esc(f'{ev["button_label"]}: {ev["title"]} (opens in a new tab)')
-    return f'''<article class="event-card" id="{ev["slug"]}">
+    # The data-* attributes let js/main.js move an event to "Past events" in
+    # the browser the moment it ends, without waiting for the next rebuild.
+    return f'''<article class="event-card" id="{ev["slug"]}" data-end="{_event_end(ev).isoformat()}" data-date="{esc(ev["date_label"])}, {start.year}" data-title="{esc(ev["title"])}" data-region="{esc(ev["region"])}">
       <div class="event-date" aria-hidden="true">
         <span class="event-date-month">{start.strftime("%b")}</span>
         <span class="event-date-day">{start.day}</span>
@@ -2650,12 +2652,21 @@ def event_schema(ev):
 
 def next_event_strip():
     """Slim homepage strip pointing at the next upcoming event. Empty when
-    there is none, so it disappears on its own."""
+    there is none, so it disappears on its own.
+
+    The strip is rendered for the soonest event at build time, and carries
+    every upcoming event in data-events. js/main.js then drops any that have
+    ended and shows the next one, so the strip is right in the browser even
+    when the last rebuild is hours old (the nightly job can run late)."""
     upcoming, _past = split_events()
     if not upcoming:
         return ""
     ev = upcoming[0]
-    return f'''<section class="next-event-strip" id="next-event">
+    feed = esc(json.dumps([
+        {"slug": e["slug"], "label": e["date_label"], "title": e["title"],
+         "end": _event_end(e).isoformat()}
+        for e in upcoming]))
+    return f'''<section class="next-event-strip" id="next-event" data-events="{feed}">
   <div class="container">
     <a href="/events#{ev["slug"]}">
       <span class="next-event-label">Next event</span>
@@ -2679,10 +2690,14 @@ def page_events():
   </div>
 </section>'''
 
-    if upcoming:
-        upcoming_html = '<div class="event-stack">' + "".join(event_card(e) for e in upcoming) + '</div>'
-    else:
-        upcoming_html = '<p class="lede muted">No events are scheduled right now. Sign up below to hear first.</p>'
+    # The stack, the empty message, the past list and the closing-band heading
+    # all carry ids so js/main.js can update them as events end.
+    cards_html = "".join(event_card(e) for e in upcoming)
+    stack_style = "" if upcoming else ' style="display:none;"'
+    empty_style = "display:none;" if upcoming else ""
+    upcoming_html = (f'<div class="event-stack" id="eventStack"{stack_style}>{cards_html}</div>'
+                     f'<p class="lede muted" id="eventsEmpty" style="{empty_style}">'
+                     'No events are scheduled right now. Sign up below to hear first.</p>')
     upcoming_section = f'''<section class="section bg-cream" id="upcoming" style="padding-top:clamp(32px,5vw,56px);">
   <div class="container">
     <h2 style="font-size:clamp(1.4rem,2.4vw,1.8rem); margin-bottom:24px;">Coming up</h2>
@@ -2690,17 +2705,16 @@ def page_events():
   </div>
 </section>'''
 
-    past_section = ""
-    if past:
-        rows = "".join(
-            f'<li><span class="event-past-date">{esc(e["date_label"])}, {_event_start(e).year}</span>'
-            f'<span class="event-past-title">{esc(e["title"])}</span>'
-            f'<span class="event-past-region">{esc(e["region"])}</span></li>'
-            for e in past)
-        past_section = f'''<section class="section-tight bg-cream" id="past" style="padding-top:0;">
+    rows = "".join(
+        f'<li><span class="event-past-date">{esc(e["date_label"])}, {_event_start(e).year}</span>'
+        f'<span class="event-past-title">{esc(e["title"])}</span>'
+        f'<span class="event-past-region">{esc(e["region"])}</span></li>'
+        for e in past)
+    past_style = "padding-top:0;" + ("" if past else " display:none;")
+    past_section = f'''<section class="section-tight bg-cream" id="past" style="{past_style}">
   <div class="container">
     <h2 style="font-size:clamp(1.2rem,2vw,1.5rem); margin-bottom:14px;">Past events</h2>
-    <ul class="event-past">{rows}</ul>
+    <ul class="event-past" id="eventPast">{rows}</ul>
   </div>
 </section>'''
 
@@ -2715,7 +2729,7 @@ def page_events():
         band_heading = "Want to hear first?"
     band = f'''<section class="section bg-mist" id="events-newsletter">
   <div class="container" style="max-width:640px; text-align:center;">
-    <h2 style="font-size:clamp(1.3rem,2.2vw,1.6rem); margin-bottom:12px;">{band_heading}</h2>
+    <h2 id="eventsBandHeading" style="font-size:clamp(1.3rem,2.2vw,1.6rem); margin-bottom:12px;">{band_heading}</h2>
     <p class="lede"><strong>Stay close on the bench.</strong> Get updates like these in your inbox.</p>
     <a href="{SUBSTACK_SUBSCRIBE_URL}" class="btn btn-solid-orange" style="margin-top:14px; display:inline-block;">Sign up</a>
     <p class="small muted" style="margin-top:22px;">Want a session for your region? Write to <a href="mailto:{CONTACT_EMAIL}" style="text-decoration:underline; font-weight:700;">{CONTACT_EMAIL}</a>.</p>

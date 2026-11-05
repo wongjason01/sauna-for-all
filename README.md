@@ -171,3 +171,18 @@ is never overwritten.
 
 `CMS_SETUP.md`, `DOMAIN_CUTOVER.md` and `PUNCH_LIST.md` cover the remaining
 open work.
+
+## Events
+
+The `/events` page, the Event schema and the homepage "Next event" strip all
+come from the `EVENTS` list in `build.py`. Add, edit or remove an entry there
+and commit; nothing else needs touching.
+
+An event counts as over once its `end` time passes (or two hours after `start`
+when there is no `end`; an `all_day` event ends at the end of that day). It then
+moves to "Past events" in two places:
+
+- at build time, so the saved HTML is right after every rebuild, and
+- in the browser, via `js/main.js`, so a visitor never sees an ended event even
+  when the last rebuild is hours old. The homepage strip also switches to the
+  next event, and hides itself when none is left.

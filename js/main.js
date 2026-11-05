@@ -162,3 +162,74 @@ document.addEventListener('DOMContentLoaded', function () {
   window.initSignatoryFilters = initSignatoryFilters;
   initSignatoryFilters();
 });
+
+/* Events: keep the homepage "Next event" strip and the /events cards current
+   in the browser, so an event that has ended drops off straight away instead of
+   waiting for the next rebuild (the nightly job can run hours late). The
+   server-rendered page is the fallback when JavaScript is off. Keep this file
+   ASCII: prepare_deploy.py reads it with the system code page on Windows. */
+(function () {
+  var now = Date.now();
+  function ended(iso) {
+    var t = Date.parse(iso);
+    return !isNaN(t) && t < now;
+  }
+
+  // Homepage strip: show the soonest event that has not ended, or hide it.
+  var strip = document.getElementById('next-event');
+  if (strip && strip.getAttribute('data-events')) {
+    var list = null;
+    try { list = JSON.parse(strip.getAttribute('data-events')); } catch (err) { list = null; }
+    if (list) {
+      var ahead = list.filter(function (ev) { return !ended(ev.end); });
+      if (!ahead.length) {
+        strip.style.display = 'none';
+      } else {
+        var next = ahead[0];
+        var link = strip.querySelector('a');
+        var text = strip.querySelector('.next-event-text');
+        if (link) link.setAttribute('href', '/events#' + next.slug);
+        if (text) text.textContent = next.label + ' \u00b7 ' + next.title;
+      }
+    }
+  }
+
+  // /events: move ended cards into "Past events" and refresh what depends on
+  // how many are left.
+  var stack = document.getElementById('eventStack');
+  if (stack) {
+    var pastList = document.getElementById('eventPast');
+    var pastSection = document.getElementById('past');
+    var cards = Array.prototype.slice.call(stack.querySelectorAll('.event-card'));
+    var remaining = 0;
+    cards.forEach(function (card) {
+      if (!ended(card.getAttribute('data-end'))) { remaining += 1; return; }
+      if (pastList) {
+        var li = document.createElement('li');
+        [['event-past-date', 'data-date'],
+         ['event-past-title', 'data-title'],
+         ['event-past-region', 'data-region']].forEach(function (pair) {
+          var span = document.createElement('span');
+          span.className = pair[0];
+          span.textContent = card.getAttribute(pair[1]) || '';
+          li.appendChild(span);
+        });
+        pastList.insertBefore(li, pastList.firstChild);
+      }
+      card.parentNode.removeChild(card);
+    });
+    if (pastList && pastSection && pastList.children.length) pastSection.style.display = '';
+
+    var empty = document.getElementById('eventsEmpty');
+    if (empty) empty.style.display = remaining ? 'none' : '';
+    stack.style.display = remaining ? '' : 'none';
+
+    var heading = document.getElementById('eventsBandHeading');
+    if (heading) {
+      heading.textContent = remaining >= 3 ? 'Not near any of these events?'
+        : remaining === 2 ? 'Not near either event?'
+        : remaining === 1 ? 'Can\u2019t make it?'
+        : 'Want to hear first?';
+    }
+  }
+})();
