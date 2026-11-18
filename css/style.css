@@ -946,11 +946,11 @@ hr.rule{ border:none; border-top:1px solid rgba(15,77,59,0.12); margin: 40px 0; 
   .event-past-region{ margin-left:0; }
 }
 
-/* Homepage "Next event" strip: straight edges, sits under the counter bar. */
-.next-event-strip{ background: var(--dark-green); color: var(--cream); display:flow-root; }
+/* Homepage "Next event" strip: straight edges, first thing under the header. Sand, so it reads against the dark header and hero. */
+.next-event-strip{ background: var(--sand); color: var(--dark-green); display:flow-root; }
 .next-event-strip a{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; padding:14px 0; }
 .next-event-strip a:focus-visible{ outline:3px solid var(--orange); outline-offset:-3px; }
-.next-event-label{ background: var(--orange); color: var(--dark-green); border-radius: var(--radius-pill); padding:3px 12px; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
+.next-event-label{ background: var(--dark-green); color: var(--cream); border-radius: var(--radius-pill); padding:3px 12px; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
 .next-event-text{ font-weight:600; }
 .next-event-go{ margin-left:auto; font-weight:700; text-decoration:underline; font-size:0.9rem; }
 @media (max-width: 620px){ .next-event-go{ margin-left:0; } }

@@ -1169,7 +1169,8 @@ def page_home():
   </div>
 </section>'''
 
-    body = hero + counter + next_event_strip() + photo_band + charter_summary + why_now + evidence + who_we_are + newsletter
+    # The "Next event" strip sits first, directly under the header.
+    body = next_event_strip() + hero + counter + photo_band + charter_summary + why_now + evidence + who_we_are + newsletter
     # Organization schema: what ties scattered brand mentions -- Instagram,
     # LinkedIn, Substack, Open Collective -- back to this site.
     organization_schema = {
