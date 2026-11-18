@@ -963,3 +963,13 @@ hr.rule{ border:none; border-top:1px solid rgba(15,77,59,0.12); margin: 40px 0; 
   .nav-links a{ font-size:0.88rem; white-space:nowrap; }
   .nav-cta .btn{ padding:10px 16px; font-size:0.72rem; letter-spacing:0.04em; }
 }
+
+/* Notice box: short standing statements (who runs Sauna for All, who hosts
+   events). Sits on white or cream sections. */
+.notice-card{
+  background: var(--cream); border:1px solid rgba(15,77,59,0.12);
+  border-radius: var(--radius-md); padding: 20px 24px; max-width: 70ch;
+  font-size: 0.92rem; line-height: 1.6;
+}
+.notice-card p + p{ margin-top: 12px; }
+.bg-cream .notice-card{ background: var(--white); }

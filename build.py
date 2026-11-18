@@ -1790,6 +1790,10 @@ def page_about():
     </div>
     <div class="people-grid">{stewards_html}</div>
     <p class="small muted" style="margin-top:22px; max-width:70ch;">For now, they act as an initial steering group, helping regional advocacy and projects get off the ground.</p>
+    <div class="notice-card" id="stewards-notice" style="margin-top:28px;">
+      <p><strong>About our stewards and volunteers.</strong> Sauna for All is a volunteer-led movement. It is not incorporated. Our founding stewards and volunteers contribute their time through their own incorporated businesses or organisations, and they do not act as agents, employees or directors of Sauna for All.</p>
+      <p><strong>Events and activities.</strong> Every event, gathering and activity under the Sauna for All name is hosted and delivered by an incorporated business or non-profit partner. The hosting partner is the organiser and is responsible for the venue, facilities, bathing, safety and insurance. Events and activities under the Sauna for All name share the values of the Public Sauna-Bathing Charter.</p>
+    </div>
     <p class="small muted" style="margin-top:52px; font-weight:700;">With Special Thanks to Advisors</p>
     <div class="people-grid" style="grid-template-columns:repeat(3,1fr); max-width:640px; margin-top:14px;">{advisors_html}</div>
   </div>
@@ -2406,7 +2410,8 @@ def page_contact():
 # end of that day. Optional keys: "place" (venue line), "venue", "locality"
 # and "country" (in-person schema), "organizer", "blocks" (several headed
 # lists or paragraphs instead of one "list"), "zones" (omit for no time-zone
-# toggle) and "where_email" (turned into a mailto link inside "where").
+# toggle), "price" ({"amount", "currency"}, for a paid event) and "where_email"
+# (turned into a mailto link inside "where").
 EVENT_FALLBACK_HOURS = 2
 EVENTS_PHOTO = "/images/photos/sauna-for-all-2026-13.jpg"
 
@@ -2512,14 +2517,14 @@ EVENTS = [
         "where_email": "info@communitysaunanetwork.co.uk",
     },
     {
-        "slug": "australia-mobile-sauna-2026-11-24",
+        "slug": "australia-mobile-sauna-2026-12-15",
         "title": "State of the Mobile Sauna Movement",
         "schema_name": "State of the Mobile Sauna Movement",
         "region": "Australia",
         "kind": "Webinar",
-        "start": "2026-11-24T18:30:00+11:00",   # 6:30 pm Sydney (AEDT), ASA page
+        "start": "2026-12-15T18:30:00+11:00",   # 6:30 pm AEDT (Sydney), ASA page; moved from Nov 24
         "end": "",                              # "about 60 minutes"; the 2 hour fallback covers it
-        "date_label": "Tuesday, November 24",
+        "date_label": "Tuesday, December 15",
         "time_label": "6:30 pm Sydney time (AEDT)",
         "details": ["Online", "About 60 minutes"],
         "free": False,
@@ -2535,11 +2540,49 @@ EVENTS = [
             "Open Q&A with the full panel",
         ],
         "who": "Current and future operators, councils and landowners, venues, community builders and anyone who wants more sauna near them. A recording will be shared with everyone who registers.",
-        # Converted from 6:30 pm Sydney time; the ASA page gives no zone.
+        # Converted from 6:30 pm AEDT (Sydney), the zone the ASA page states.
         "zones": "6:30 pm Sydney, Melbourne, Canberra and Hobart · 5:30 pm Brisbane · 6 pm Adelaide · 5 pm Darwin · 3:30 pm Perth · 8:30 pm Auckland",
         "button_label": "Register on the ASA site",
-        "url": "https://saunaaustralia.org.au/l/state-of-the-movement",
+        # The /events/ page carries the new date; the /l/ landing page still
+        # showed 24 November when this was changed, so link the former.
+        "url": "https://saunaaustralia.org.au/events/state-of-the-movement",
         "where": "Registration is on the Australian Sauna Association site.",
+    },
+    {
+        "slug": "spark-workshop-2026-12-05",
+        "title": "Spark: Community Is Your Business Model",
+        "schema_name": "Spark: Community is your Business Model (Workshop)",
+        "region": "Worldwide",
+        "kind": "Workshop",
+        "start": "2026-12-05T11:00:00-05:00",   # 11:00 am Eastern (Luma)
+        "end": "2026-12-05T13:30:00-05:00",     # 1:30 pm Eastern (Luma)
+        "date_label": "Saturday, December 5",
+        "time_label": "11 am to 1:30 pm Eastern",
+        "details": ["Online", "CA$100"],
+        "free": False,
+        "price": {"amount": "100", "currency": "CAD"},
+        "hosts": "A partnership between Sauna for All and Saunthropology. Led by Justyna Turek of Saunthropology and Becky Pelkonen.",
+        "lead": "A 2.5-hour online workshop for current and future owners, founders, hosts and programmers of saunas, bathhouses and spas who want community-building to be a real part of how their business works.",
+        "blocks": [
+            {"heading": "What we will do", "text": "Together we will work through a set of critical questions about who you serve and why. Then you will turn your answers into concrete choices for your service, space, ritual, programming, pricing, messaging and governance. Better for your community, and better for your bottom line."},
+            {"heading": "What you will leave with", "items": [
+                "A clear statement of the community your site serves and the role it wants to play in its place",
+                "Your answers to the critical community questions, on a one-page Community Design Canvas",
+                "3 to 5 design moves and an action plan you can start testing right away",
+                "Connections with operators, hosts and programmers facing similar questions",
+            ]},
+            {"heading": "How it works", "items": [
+                "Live online, with small breakout groups that mix different kinds of sites",
+                "Short breaks every 40 to 50 minutes",
+                "Limited to 40 participants",
+                "Can’t join live? Register and we will send you the recording",
+            ]},
+        ],
+        "who": "Current and future owners, founders, hosts and programmers of saunas, bathhouses and spas: start-ups planning a new site, established sites ready to reassess, deepen their community role or grow into a new venue, and hosts and programmers who shape the guest experience every day.",
+        "zones": "8 to 10:30 am Los Angeles, San Francisco and Seattle · 9 to 11:30 am Vancouver and most of BC, and Denver · 10 am to 12:30 pm Cranbrook and the East Kootenay, Calgary, Edmonton, Chicago and Winnipeg · 11 am to 1:30 pm Toronto, Montreal and New York · 4 to 6:30 pm London and Dublin · 5 to 7:30 pm Stockholm, Oslo, Copenhagen and Berlin · 6 to 8:30 pm Helsinki and Tallinn",
+        "button_label": "Get tickets",
+        "url": "https://luma.com/x3ok4jhy",
+        "where": "Tickets are CA$100 (about US$71, €62 or £53). You will get your ticket on Luma.",
     },
 ]
 
@@ -2643,7 +2686,13 @@ def event_schema(ev):
     if ev.get("end"):
         data["endDate"] = ev["end"]
     # Only claim a price where the registration page states one.
-    if ev.get("free"):
+    if ev.get("price"):
+        data["isAccessibleForFree"] = False
+        data["offers"] = {"@type": "Offer", "url": ev["url"],
+                          "price": ev["price"]["amount"],
+                          "priceCurrency": ev["price"]["currency"],
+                          "availability": "https://schema.org/InStock"}
+    elif ev.get("free"):
         data["isAccessibleForFree"] = True
         data["offers"] = {"@type": "Offer", "url": ev["url"], "price": "0",
                           "priceCurrency": "CAD",
@@ -2702,6 +2751,9 @@ def page_events():
   <div class="container">
     <h2 style="font-size:clamp(1.4rem,2.4vw,1.8rem); margin-bottom:24px;">Coming up</h2>
     {upcoming_html}
+    <div class="notice-card" id="events-notice" style="margin-top:28px;">
+      <p><strong>Events and activities.</strong> Every event, gathering and activity under the Sauna for All name is hosted and delivered by an incorporated business or non-profit partner. The hosting partner is the organiser and is responsible for the venue, facilities, bathing, safety and insurance. Events and activities under the Sauna for All name share the values of the Public Sauna-Bathing Charter. <a href="/about#stewards" style="text-decoration:underline; font-weight:700;">About our stewards and volunteers&nbsp;&rarr;</a></p>
+    </div>
   </div>
 </section>'''
 
